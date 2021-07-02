@@ -30,12 +30,28 @@ namespace signed_measure
 
 variables {s : signed_measure α} {f : ℕ → set α}
 
+instance : has_coe_t (signed_measure α) (set α → ℝ) := ⟨measure_of⟩
+
+lemma ext_iff (s t : signed_measure α) : 
+  s = t ↔ ∀ i : set α, s.measure_of i = t.measure_of i :=
+begin
+  cases s, cases t, simp [function.funext_iff],
+end
+
+@[ext]
+lemma ext {s t : signed_measure α} 
+  (h : ∀ i : set α, s.measure_of i = t.measure_of i) : s = t :=
+(ext_iff s t).2 h
+
 lemma measure_Union [encodable β] {f : β → set α}
-  (hn : pairwise (disjoint on f)) (h : ∀ i, measurable_set (f i)) :
+  (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) :
   s.measure_of (⋃ i, f i) = ∑' i, s.measure_of (f i) :=
 begin
-  -- rw [← encodable.Union_decode₂, ← tsum_Union_decode₂],
-  sorry
+  rw [← encodable.Union_decode₂, ← tsum_Union_decode₂],
+  apply s.m_Union,
+  { exact measurable_set.bUnion_decode₂ hf₁ },
+  { exact encodable.Union_decode₂_disjoint_on hf₂ },
+  { exact s.empty }
 end
 
 lemma measure_of_union {s : signed_measure α} {A B : set α} 
@@ -43,7 +59,7 @@ lemma measure_of_union {s : signed_measure α} {A B : set α}
   s.measure_of (A ∪ B) = s.measure_of A + s.measure_of B :=
 begin
   rw [union_eq_Union, measure_Union, tsum_fintype, fintype.sum_bool, cond, cond],
-  exacts [pairwise_disjoint_on_bool.2 h, λ b, bool.cases_on b hB hA]
+  exacts [λ b, bool.cases_on b hB hA, pairwise_disjoint_on_bool.2 h]
 end
 
 lemma measure_of_nonneg_disjoint_union_eq_zero {s : signed_measure α} {A B : set α}
@@ -303,7 +319,13 @@ def of_measure (μ : measure α) [hμ : finite_measure μ] : signed_measure α :
     exact measure_mono (set.subset_univ _),
   end }
 
-instance : inhabited (signed_measure α) := ⟨of_measure 0⟩
+def zero : signed_measure α := of_measure 0
+
+instance : has_zero (signed_measure α) := ⟨zero⟩
+instance : inhabited (signed_measure α) := ⟨0⟩
+
+@[simp]
+lemma zero_apply (i : set α) : (0 : signed_measure α).measure_of i = 0 := rfl
 
 /-- The negative of a signed measure is a signed measure. -/
 def neg (s : signed_measure α) : signed_measure α := 
@@ -332,10 +354,83 @@ def add (s t : signed_measure α) : signed_measure α :=
 instance : has_add (signed_measure α) := ⟨add⟩
 instance : has_neg (signed_measure α) := ⟨neg⟩
 
+@[simp]
+lemma neg_apply {s : signed_measure α} (i : set α) : 
+  (-s).measure_of i = - s.measure_of i := rfl
+
+@[simp]
+lemma add_apply {s t : signed_measure α} (i : set α) : 
+  (s + t).measure_of i = s.measure_of i + t.measure_of i := rfl
+
+lemma add_assoc (s t u : signed_measure α) : s + t + u = s + (t + u) :=
+begin
+  ext i, 
+  rw [add_apply, add_apply, add_assoc], refl,
+end
+
+@[simp]
+lemma zero_add (s : signed_measure α) : 0 + s = s :=
+begin
+  ext i,
+  rw [add_apply, zero_apply, zero_add],
+end
+
+@[simp]
+lemma add_zero (s : signed_measure α) : s + 0 = s :=
+begin
+  ext i,
+  rw [add_apply, zero_apply, add_zero],
+end
+
+lemma add_comm (s t : signed_measure α) : s + t = t + s :=
+begin
+  ext i, 
+  rw [add_apply, add_comm], refl,
+end
+
+lemma add_left_neg (s : signed_measure α) : -s + s = 0 :=
+begin
+  ext i,
+  rw [add_apply, neg_apply, zero_apply, add_left_neg],
+end
+
+instance : add_comm_group (signed_measure α) := 
+{ add := (+), zero := (0), 
+  neg := signed_measure.neg,
+  add_assoc := add_assoc,
+  zero_add := zero_add,
+  add_zero := add_zero,
+  add_comm := add_comm,
+  add_left_neg := add_left_neg }
+
 /-- Given two finite measures `μ, ν`, `μ - ν` is signed measure. -/
 def of_sub_measure (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_measure ν] : 
   signed_measure α := 
 of_measure μ + - of_measure ν
+
+def smul (r : ℝ) (s : signed_measure α) : signed_measure α := 
+{ measure_of := r • s.measure_of,
+  empty := by simp [s.empty],
+  m_Union := 
+  begin
+    intros f hf₁ hf₂,
+    rw [pi.smul_apply, s.m_Union hf₁ hf₂, ← tsum_smul], refl,
+    exact summable_measure_of hf₁ hf₂
+  end }
+
+instance : has_scalar ℝ (signed_measure α) := ⟨smul⟩
+
+@[simp]
+lemma smul_apply {s : signed_measure α} {r : ℝ} (i : set α) : 
+  (r • s).measure_of i = r • s.measure_of i := rfl
+
+instance : module ℝ (signed_measure α) := 
+{ one_smul := by { intros, ext i; simp [one_smul] },
+  mul_smul := by { intros, ext i; simp [mul_smul] },
+  smul_add := by { intros, ext i; simp [smul_add] },
+  smul_zero := by { intros, ext i; simp [smul_zero] },
+  add_smul := by { intros, ext i; simp [add_smul] },
+  zero_smul := by { intros, ext i; simp [zero_smul] } } .
 
 end signed_measure
 

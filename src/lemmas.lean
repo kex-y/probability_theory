@@ -44,19 +44,30 @@ begin
   { exact ennreal.of_real_ne_top } 
 end
 
-lemma tsum_to_real_of_not_summable {f : α → ℝ≥0∞} (hf : ∀ a, f a ≠ ⊤) 
-  (h : ¬ summable (ennreal.to_real ∘ f)) : 
-  (∑' a, f a).to_real = ∑' a, (f a).to_real :=
+open filter
+
+lemma tsum_nonneg_coe_eq_top_of_not_summable (f : ℕ → ℝ≥0)
+  (h : ¬ summable (λ (i : ℕ), (f i : ℝ))) :
+  ∑' (a : ℕ), (f a : ℝ≥0∞) = ⊤ :=
 begin
-  rw [tsum_eq_zero_of_not_summable h, to_real_eq_zero_iff],
-  apply or.inr,
-  suffices : has_sum f ⊤,
-  { rw has_sum.tsum_eq this },
-  rw has_sum,
+  suffices : has_sum (λ a, (f a : ℝ≥0∞)) ⊤,
+  { exact this.tsum_eq },
+  unfold has_sum,
   sorry
 end
 
-lemma tsum_to_real (f : α → ℝ≥0∞) (hf : ∀ a, f a ≠ ⊤) : 
+lemma tsum_to_real_of_not_summable {f : ℕ → ℝ≥0∞} (hf : ∀ a, f a ≠ ⊤) 
+  (h : ¬ summable (ennreal.to_real ∘ f)) : 
+  (∑' a, f a).to_real = ∑' a, (f a).to_real :=
+begin
+  lift f to ℕ → ℝ≥0 using hf,
+  change ¬ summable (λ i, (f i : ℝ≥0∞).to_real) at h, 
+  simp_rw [coe_to_real] at h ⊢,
+  rw [tsum_eq_zero_of_not_summable h, 
+      tsum_nonneg_coe_eq_top_of_not_summable _ h, top_to_real],
+end
+
+lemma tsum_to_real (f : ℕ → ℝ≥0∞) (hf : ∀ a, f a ≠ ⊤) : 
   (∑' a, f a).to_real = ∑' a, (f a).to_real :=
 begin
   by_cases summable (ennreal.to_real ∘ f),
@@ -65,6 +76,21 @@ begin
 end
 
 end tsum
+
+section measure_theory
+
+open measure_theory
+
+lemma measure.summable_to_real_seq {α : Type u_1} [measurable_space α] 
+  {μ : measure α} [hμ : finite_measure μ]
+  {f : ℕ → set α} (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) :
+  summable (ennreal.to_real ∘ μ ∘ f) :=
+begin
+  apply summable_of_nonneg_of_le,
+  all_goals { sorry }
+end
+
+end measure_theory
 
 section set
 

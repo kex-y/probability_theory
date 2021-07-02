@@ -1,6 +1,9 @@
 import topology.instances.ereal
 import topology.instances.ennreal
 
+/- This file contains some lemma regarding the type `ereal` though its mostly 
+unused in this project. -/
+
 noncomputable theory
 open_locale classical big_operators ennreal
 
