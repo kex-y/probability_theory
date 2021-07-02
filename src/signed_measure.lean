@@ -1,97 +1,30 @@
 import measure_theory.integration
 import data.real.ereal
+import lemmas
+
+/-
+We will in this file attempt to define signed measure and develope basic APIs 
+for its use.
+-/
 
 noncomputable theory
 open_locale classical big_operators nnreal ennreal
 
 variables {α β : Type*}
-variables [measurable_space α] [measurable_space β] 
+variables [measurable_space α]
 
 namespace measure_theory
 
-def absolutely_continuous (ν μ : measure α) : Prop := 
-  ∀ (A : set α) (hA₁ : measurable_set A) (hA₂ : μ A = 0), ν A = 0 
-
-variables {μ : measure α}
-
-local infix ` << `:60 := absolutely_continuous
-local infix ` . `:max := measure.with_density
-
-lemma lintegral_in_eq_zero {f : α → ℝ≥0∞} (hf : measurable f) 
-  {A : set α} (hA : μ A = 0) : ∫⁻ a in A, f a ∂μ = 0 :=
-begin
-  rw lintegral_eq_zero_iff hf,
-  ext, 
-  rw measure.restrict_zero_set hA, 
-  refl,
-end  
-
-lemma map_absolutely_continuous (f : α → ℝ≥0∞) (hf : measurable f) (μ : measure α) : 
-  μ . f << μ :=
-begin
-  intros A hA₁ hA₂,
-  rw with_density_apply _ hA₁,
-  exact lintegral_in_eq_zero hf hA₂
-end 
-
--- We note that a signed measure cannot achieve both `±∞` at the same time since 
--- we want to avoid the case of `∞ - ∞`.
+/-- A signed measure on a measurable space `α` is a σ-additive, real-valued function 
+that maps the empty set to zero. -/
 structure signed_measure (α : Type*) [measurable_space α] :=
 (measure_of : set α → ℝ)
 (empty : measure_of ∅ = 0)
 (m_Union ⦃f : ℕ → set α⦄ :
-  (∀ i, measurable_set (f i)) → pairwise (disjoint on f) → --summable (measure_of ∘ f) →
+  (∀ i, measurable_set (f i)) → pairwise (disjoint on f) → 
   measure_of (⋃ i, f i) = ∑' i, measure_of (f i))
 
-open ennreal set
-
-lemma tsum_to_real_of_summable {f : α → ℝ≥0∞} (hf : ∀ a, f a ≠ ⊤) 
-  (h : summable (ennreal.to_real ∘ f)) : 
-  (∑' a, f a).to_real = ∑' a, (f a).to_real :=
-begin
-  obtain ⟨r, hr⟩ := h,
-  rw has_sum.tsum_eq hr,
-  have hr' : (ennreal.of_real r).to_real = r,
-  { rw ennreal.to_real_of_real,
-    rw ← has_sum.tsum_eq hr,
-    apply tsum_nonneg,
-    intro x,
-    exact to_real_nonneg }, 
-  suffices : has_sum f (ennreal.of_real r),
-  { rw has_sum.tsum_eq this,
-    exact hr' },
-  rw has_sum at *,
-  rw ← tendsto_to_real_iff,
-  { convert hr, ext s,
-    { rw to_real_sum,
-      intros a _,
-      exact lt_top_iff_ne_top.2 (hf a) } },
-  { intros s hs,
-    rw sum_eq_top_iff at hs,
-    obtain ⟨x, _, hx⟩ := hs,
-    exact (hf x) hx },
-  { exact ennreal.of_real_ne_top } 
-end
-
-lemma tsum_to_real_of_not_summable {f : α → ℝ≥0∞} (hf : ∀ a, f a ≠ ⊤) 
-  (h : ¬ summable (ennreal.to_real ∘ f)) : 
-  (∑' a, f a).to_real = ∑' a, (f a).to_real :=
-begin
-  rw [tsum_eq_zero_of_not_summable h, to_real_eq_zero_iff],
-  apply or.inr,
-  suffices : has_sum f ⊤,
-  { rw has_sum.tsum_eq this },
-  rw has_sum,
-  sorry
-end
-
-lemma tsum_to_real (f : α → ℝ≥0∞) (hf : ∀ a, f a ≠ ⊤) : 
-  (∑' a, f a).to_real = ∑' a, (f a).to_real :=
-begin
-  by_cases summable (ennreal.to_real ∘ f),
-  exact tsum_to_real_of_summable hf h,
-  exact tsum_to_real_of_not_summable hf h,
-end
+open set
 
 namespace signed_measure
 
@@ -129,21 +62,6 @@ lemma measure_of_nonpos_disjoint_union_eq_zero {s : signed_measure α} {A B : se
 begin
   rw measure_of_union h hA₁ hB₁ at hAB,
   linarith,
-end
-
-lemma Union_eq_union {ι} (f : ι → set α) (j : ι) : 
-  (⋃ i, f i) = f j ∪ ⋃ (i : ι) (hi : i ≠ j), f i :=
-begin
-  ext x, 
-  simp only [exists_prop, mem_Union, mem_union_eq], 
-  split,
-  { rintro ⟨i, hi⟩,
-    by_cases i = j,
-    { exact or.inl (h ▸ hi) },
-    { exact or.inr ⟨i, h, hi⟩ } },
-  { rintro (hj | ⟨i, hij, hi⟩),
-    { exact ⟨j, hj⟩ },
-    { exact ⟨i, hi⟩ } }
 end
 
 lemma measure_of_Union_nonneg (hf₁ : ∀ i, measurable_set (f i)) 
@@ -256,9 +174,6 @@ begin
     rw [not_not, this, tsum_eq_zero_of_not_summable h] },
 end
 
-lemma real.norm_of_neg {x : ℝ} (hx : x < 0) : ∥x∥ = -x :=
-abs_of_neg hx
-
 def measure_of_nonneg_seq (s : signed_measure α) (f : ℕ → set α) : ℕ → set α := 
 λ i, if 0 ≤ (s.measure_of ∘ f) i then f i else ∅
 
@@ -347,12 +262,9 @@ begin
              s.empty, _root_.zero_sub] }
 end
 
-  -- { ext i,
-  --   by_cases 0 ≤ (s.measure_of ∘ f) i,
-  --   { rw [real.norm_of_nonneg h, if_pos h] },
-  --   { rw [real.norm_of_neg (lt_of_not_ge h), if_neg h] } },
-
-lemma summable_measure_of 
+/-- Given a signed measure `s`, `s.measure_of ∘ f` is summable for all sequence 
+`f` of pairwise disjoint measurable sets. -/
+theorem summable_measure_of 
   (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) : 
   summable (s.measure_of ∘ f) :=
 begin
@@ -376,6 +288,7 @@ begin
     exact measure_of_nonpos_seq_nonpos },
 end
 
+/-- A finite measure coerced into a real function is a signed measure. -/
 def of_measure (μ : measure α) [hμ : finite_measure μ] : signed_measure α := 
 { measure_of := ennreal.to_real ∘ μ.measure_of,
   empty := by simp [μ.empty],
@@ -390,6 +303,9 @@ def of_measure (μ : measure α) [hμ : finite_measure μ] : signed_measure α :
     exact measure_mono (set.subset_univ _),
   end }
 
+instance : inhabited (signed_measure α) := ⟨of_measure 0⟩
+
+/-- The negative of a signed measure is a signed measure. -/
 def neg (s : signed_measure α) : signed_measure α := 
 { measure_of := - s.measure_of,
   empty := by simp [s.empty],
@@ -401,6 +317,7 @@ def neg (s : signed_measure α) : signed_measure α :=
     exact summable_measure_of hf₁ hf₂
   end }
 
+/-- The sum of two signed measure is a signed measure. -/
 def add (s t : signed_measure α) : signed_measure α := 
 { measure_of := s.measure_of + t.measure_of,
   empty := by simp [s.empty, t.empty],
@@ -415,11 +332,11 @@ def add (s t : signed_measure α) : signed_measure α :=
 instance : has_add (signed_measure α) := ⟨add⟩
 instance : has_neg (signed_measure α) := ⟨neg⟩
 
+/-- Given two finite measures `μ, ν`, `μ - ν` is signed measure. -/
 def of_sub_measure (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_measure ν] : 
   signed_measure α := 
 of_measure μ + - of_measure ν
 
 end signed_measure
-
 
 end measure_theory
