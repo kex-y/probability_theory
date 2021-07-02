@@ -12,9 +12,13 @@ variables {α β : Type*} [measurable_space α]
 
 namespace signed_measure
 
+/-- A set `i` is positive with respect to a signed measure if for all 
+measurable set `j`, `j ⊆ i`, `j` has non-negative measure. -/
 def positive (s : signed_measure α) (i : set α) : Prop := 
 ∀ j ⊆ i, measurable_set j → 0 ≤ s.measure_of j
 
+/-- A set `i` is negative with respect to a signed measure if for all 
+measurable set `j`, `j ⊆ i`, `j` has non-positive measure. -/
 def negative (s : signed_measure α) (i : set α) : Prop := 
 ∀ j ⊆ i, measurable_set j → s.measure_of j ≤ 0
 
@@ -58,6 +62,44 @@ end
 lemma negative_union_negative
   (hi₁ : measurable_set i) (hi₂ : s.negative i)
   (hj₁ : measurable_set j) (hj₂ : s.negative j) : s.negative (i ∪ j) :=
+begin
+  intros a ha₁ ha₂,
+  have h₁ := measurable_set.inter ha₂ hi₁,
+  have h₂ := measurable_set.diff (measurable_set.inter ha₂ hj₁) h₁,
+  rw [← set.union_inter_sdiff_eq ha₁, 
+      measure_of_union (set.union_inter_sdiff_disjoint ha₁) h₁ h₂],
+  refine add_nonpos (hi₂ _ (a.inter_subset_right i) h₁) _,
+  exact hj₂ _ (set.subset.trans ((a ∩ j).diff_subset (a ∩ i)) (a.inter_subset_right j)) h₂,
+end
+
+-- def aux₀r (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) := 
+-- Sup {t | ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), t = s.measure_of j}
+
+-- instance : has_Sup ℝ := real.has_Sup
+
+-- noncomputable
+-- def aux₀set (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : set α := 
+-- classical.some 
+
+-- noncomputable def aux (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : ℕ → ℝ × set α 
+-- | 0 := sorry
+-- | (n + 1) := sorry
+
+lemma exists_positive_set (hi₁ : measurable_set i) (hi₂ : 0 < s.measure_of i) : 
+  ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.positive j ∧ 0 < s.measure_of j :=
+begin
+  by_cases s.positive i,
+  { exact ⟨i, hi₁, set.subset.refl _, h, hi₂⟩ },
+  { rw positive at h,
+    push_neg at h,
+    sorry }
+end
+
+/-- The Hahn-decomposition thoerem. -/
+theorem exists_disjoint_positive_negative_union_eq :
+  ∃ (i j : set α) (hi₁ : measurable_set i) (hi₂ : s.positive i) 
+                  (hj₁ : measurable_set j) (hj₂ : s.negative j), 
+  disjoint i j ∧ i ∪ j = set.univ :=
 begin
   sorry
 end

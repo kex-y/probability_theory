@@ -49,10 +49,9 @@ lemma tsum_nonneg_coe_eq_top_of_not_summable (f : ℕ → ℝ≥0)
   (h : ¬ summable (λ (i : ℕ), (f i : ℝ))) :
   ∑' (a : ℕ), (f a : ℝ≥0∞) = ⊤ :=
 begin
-  suffices : has_sum (λ a, (f a : ℝ≥0∞)) ⊤,
-  { exact this.tsum_eq },
-  unfold has_sum,
-  sorry
+  by_contra h',
+  rw [← ne.def, ennreal.tsum_coe_ne_top_iff_summable] at h',
+  exact h (nnreal.summable_coe.mpr h'), 
 end
 
 lemma tsum_to_real_of_not_summable {f : ℕ → ℝ≥0∞} (hf : ∀ a, f a ≠ ⊤) 
@@ -75,21 +74,6 @@ begin
 end
 
 end tsum
-
-section measure_theory
-
-open measure_theory
-
-lemma measure.summable_to_real_seq {α : Type u_1} [measurable_space α] 
-  {μ : measure α} [hμ : finite_measure μ]
-  {f : ℕ → set α} (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) :
-  summable (ennreal.to_real ∘ μ ∘ f) :=
-begin
-  apply summable_of_nonneg_of_le,
-  all_goals { sorry }
-end
-
-end measure_theory
 
 section set
 
