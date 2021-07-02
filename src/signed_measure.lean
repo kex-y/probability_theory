@@ -13,8 +13,6 @@ open_locale classical big_operators nnreal ennreal
 variables {α β : Type*}
 variables [measurable_space α]
 
-namespace measure_theory
-
 /-- A signed measure on a measurable space `α` is a σ-additive, real-valued function 
 that maps the empty set to zero. -/
 structure signed_measure (α : Type*) [measurable_space α] :=
@@ -24,7 +22,7 @@ structure signed_measure (α : Type*) [measurable_space α] :=
   (∀ i, measurable_set (f i)) → pairwise (disjoint on f) → 
   measure_of (⋃ i, f i) = ∑' i, measure_of (f i))
 
-open set
+open set measure_theory
 
 namespace signed_measure
 
@@ -433,5 +431,3 @@ instance : module ℝ (signed_measure α) :=
   zero_smul := by { intros, ext i; simp [zero_smul] } } .
 
 end signed_measure
-
-end measure_theory

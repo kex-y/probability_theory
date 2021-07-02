@@ -10,7 +10,6 @@ noncomputable theory
 open_locale classical big_operators nnreal ennreal
 
 variables {α β : Type*}
-variables [measurable_space α] [measurable_space β] 
 
 open ennreal set
 
@@ -107,6 +106,27 @@ begin
   { rintro (hj | ⟨i, hij, hi⟩),
     { exact ⟨j, hj⟩ },
     { exact ⟨i, hi⟩ } }
+end
+
+lemma set.union_inter_sdiff_eq {a b c : set α} (habc : a ⊆ b ∪ c) : 
+  a ∩ b ∪ a ∩ c \ (a ∩ b) = a :=
+begin
+  ext x, split,
+  { rintro (h | h),
+    exacts [h.1, h.1.1] },
+  { intro ha,
+    by_cases x ∈ b,
+    { left, exact ⟨ha, h⟩ },
+    { right, 
+      obtain (ha' | ha') := habc ha,
+      exacts [false.elim (h  ha'), ⟨⟨ha, ha'⟩, not_and.2 (λ _, h)⟩] } }
+end
+
+lemma set.union_inter_sdiff_disjoint {a b c : set α} (habc : a ⊆ b ∪ c) : 
+  disjoint (a ∩ b) (a ∩ c \ (a ∩ b)) := 
+begin
+  rintro x ⟨⟨hxa, hxb⟩, _, hxab⟩,
+  exact hxab ⟨hxa, hxb⟩,
 end
 
 end set
