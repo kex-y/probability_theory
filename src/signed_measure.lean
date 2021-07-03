@@ -52,13 +52,21 @@ begin
   { exact s.empty }
 end
 
-lemma measure_of_union {s : signed_measure α} {A B : set α} 
+lemma measure_of_union {A B : set α} 
   (h : disjoint A B) (hA : measurable_set A) (hB : measurable_set B) : 
   s.measure_of (A ∪ B) = s.measure_of A + s.measure_of B :=
 begin
   rw [union_eq_Union, measure_Union, tsum_fintype, fintype.sum_bool, cond, cond],
   exacts [λ b, bool.cases_on b hB hA, pairwise_disjoint_on_bool.2 h]
 end
+
+lemma measure_of_diff {A B : set α} (hA : measurable_set A) (hB : measurable_set B) 
+  (h : A ⊆ B) : s.measure_of A + s.measure_of (B \ A) = s.measure_of B :=
+by rw [← measure_of_union disjoint_diff hA (hB.diff hA), union_diff_cancel h]
+
+lemma measure_of_diff' {A B : set α} (hA : measurable_set A) (hB : measurable_set B) 
+  (h : A ⊆ B) : s.measure_of (B \ A) = s.measure_of B - s.measure_of A :=
+by rw [← measure_of_diff hA hB h, add_sub_cancel']
 
 lemma measure_of_nonneg_disjoint_union_eq_zero {s : signed_measure α} {A B : set α}
   (h : disjoint A B) (hA₁ : measurable_set A) (hB₁ : measurable_set B)

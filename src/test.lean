@@ -1,10 +1,15 @@
-import topology.instances.ennreal
+import algebra.big_operators
 
-open_locale big_operators classical ennreal nnreal
+open_locale big_operators
 
-lemma tsum_nonneg_coe_eq_top_of_not_summable (f : ℕ → ℝ≥0)
-  (h : ¬ summable (λ (i : ℕ), (f i : ℝ))) :
-  ∑' (a : ℕ), (f a : ℝ≥0∞) = ⊤ :=
-begin
-  sorry
-end
+variables {α : Type*}
+
+def aux₁ : set α → set α := sorry
+
+def aux (i : set α) : ℕ → set α 
+| 0 := aux₁ i
+| (n + 1) := 
+aux₁ $ i \ ⋃ k ≤ n, aux k -- how to apply nat.lt_succ_iff.mpr
+
+example (n : ℕ) : ∀ k ≤ n, k < n + 1 := 
+by intro k; exact nat.lt_succ_iff.mpr
