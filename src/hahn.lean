@@ -72,6 +72,26 @@ begin
   exact hj₂ _ (set.subset.trans ((a ∩ j).diff_subset (a ∩ i)) (a.inter_subset_right j)) h₂,
 end
 
+lemma exists_pos_measure_of_not_negative (hi : ¬ s.negative i) : 
+  ∃ (j : set α) (hj₁ : j ⊆ i) (hj₂ : measurable_set j), 0 < s.measure_of j :=
+begin
+  rw negative at hi,
+  push_neg at hi,
+  obtain ⟨j, hj₁, hj₂, hj⟩ := hi,
+  exact ⟨j, hj₁, hj₂, hj⟩,
+end
+
+example (l : ℝ) (hl : 0 < l) : ∃ n : ℕ, (1 / (n + 1) : ℝ) < l := exists_nat_one_div_lt hl
+#check nat.find
+
+lemma exists_nat_one_div_lt_measure_of_not_negative (hi : ¬ s.negative i) :
+  ∃ (n : ℕ) (j : set α) (hj₁ : j ⊆ i) (hj₂ : measurable_set j), 
+  (1 / (n + 1) : ℝ) < s.measure_of j := 
+let ⟨j, hj₁, hj₂, hj⟩ := exists_pos_measure_of_not_negative hi in
+let ⟨n, hn⟩ := exists_nat_one_div_lt hj in ⟨n, j, hj₁, hj₂, hn⟩
+
+-- def aux₀ :
+
 -- def aux₀r (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) := 
 -- Sup {t | ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), t = s.measure_of j}
 
@@ -85,14 +105,12 @@ end
 -- | 0 := sorry
 -- | (n + 1) := sorry
 
-lemma exists_positive_set (hi₁ : measurable_set i) (hi₂ : 0 < s.measure_of i) : 
-  ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.positive j ∧ 0 < s.measure_of j :=
+lemma exists_positive_set (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : 
+  ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.negative j ∧ s.measure_of j < 0 :=
 begin
-  by_cases s.positive i,
+  by_cases s.negative i,
   { exact ⟨i, hi₁, set.subset.refl _, h, hi₂⟩ },
-  { rw positive at h,
-    push_neg at h,
-    sorry }
+  { sorry }
 end
 
 /-- The Hahn-decomposition thoerem. -/

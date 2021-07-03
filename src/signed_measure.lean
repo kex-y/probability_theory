@@ -360,46 +360,14 @@ lemma neg_apply {s : signed_measure α} (i : set α) :
 lemma add_apply {s t : signed_measure α} (i : set α) : 
   (s + t).measure_of i = s.measure_of i + t.measure_of i := rfl
 
-lemma add_assoc (s t u : signed_measure α) : s + t + u = s + (t + u) :=
-begin
-  ext i, 
-  rw [add_apply, add_apply, add_assoc], refl,
-end
-
-@[simp]
-lemma zero_add (s : signed_measure α) : 0 + s = s :=
-begin
-  ext i,
-  rw [add_apply, zero_apply, zero_add],
-end
-
-@[simp]
-lemma add_zero (s : signed_measure α) : s + 0 = s :=
-begin
-  ext i,
-  rw [add_apply, zero_apply, add_zero],
-end
-
-lemma add_comm (s t : signed_measure α) : s + t = t + s :=
-begin
-  ext i, 
-  rw [add_apply, add_comm], refl,
-end
-
-lemma add_left_neg (s : signed_measure α) : -s + s = 0 :=
-begin
-  ext i,
-  rw [add_apply, neg_apply, zero_apply, add_left_neg],
-end
-
 instance : add_comm_group (signed_measure α) := 
 { add := (+), zero := (0), 
   neg := signed_measure.neg,
-  add_assoc := add_assoc,
-  zero_add := zero_add,
-  add_zero := add_zero,
-  add_comm := add_comm,
-  add_left_neg := add_left_neg }
+  add_assoc := by { intros, ext i; simp [add_assoc] },
+  zero_add := by { intros, ext i; simp },
+  add_zero := by { intros, ext i; simp },
+  add_comm := by { intros, ext i; simp [add_comm] },
+  add_left_neg := by { intros, ext i; simp } } .
 
 /-- Given two finite measures `μ, ν`, `μ - ν` is signed measure. -/
 def of_sub_measure (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_measure ν] : 
