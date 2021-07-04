@@ -12,6 +12,8 @@ variables {α β : Type*} [measurable_space α]
 
 namespace signed_measure
 
+open filter
+
 /-- A set `i` is positive with respect to a signed measure if for all 
 measurable set `j`, `j ⊆ i`, `j` has non-negative measure. -/
 def positive (s : signed_measure α) (i : set α) : Prop := 
@@ -157,10 +159,6 @@ def aux (s : signed_measure α) (i : set α) : ℕ → set α
 lemma aux_succ (n : ℕ) : s.aux i n.succ = s.aux₁ i ⋃ k ≤ n, s.aux i k := 
 by rw aux
 
--- lemma aux_spec_min (n : ℕ) (h : ¬ s.negative (s.aux i n)) 
---   {m : ℕ} (hm : m < s.aux₀ (s.aux i n)) : ¬ s.p (s.aux i n) m  :=
--- aux₀_min h hm 
-
 lemma aux_subset (n : ℕ) : 
   s.aux i n ⊆ i := 
 begin
@@ -168,17 +166,23 @@ begin
   { rw aux, exact aux₁_subset'' }
 end
 
--- lemma aux_spec (n : ℕ) (h : ¬ s.negative (i \ ⋃ k ≤ n, s.aux i k)) : 
---   s.p i (s.aux i (n + 1)) (s.aux₀ i (⋃ k ≤ n, s.aux i k)) := 
--- begin
---   rw aux_succ,
---   rcases aux₀_spec h with ⟨k, hk₁, hk₂, hk₃⟩,
---   refine ⟨k, _, hk₂, hk₃⟩,
---   refine set.subset.trans hk₁ _,
---   apply set.diff_subset_diff_right,
---   -- exact aux₁_subset'' _,
---   sorry
--- end
+lemma aux_spec (n : ℕ) (h : ¬ s.negative (i \ ⋃ k ≤ n, s.aux i k)) : 
+  s.p i (s.aux i n) (s.aux₀ i (⋃ k ≤ n, s.aux i k)) := 
+begin
+  rcases aux₀_spec h with ⟨k, hk₁, hk₂, hk₃⟩,
+  refine ⟨k, set.subset.trans hk₁ _, hk₂, hk₃⟩,
+  apply set.diff_subset_diff_right,
+  intros x hx,
+  simp only [exists_prop, set.mem_Union],
+  exact ⟨n, le_rfl, hx⟩,
+end
+
+lemma aux_lt (n : ℕ) (hn :¬ s.negative (i \ ⋃ l ≤ n, s.aux i l)) : 
+  (1 / (s.aux₀ i (⋃ k ≤ n, s.aux i k) + 1) : ℝ) < s.measure_of (s.aux i n.succ) :=
+begin
+  rw aux_succ,
+  apply aux₁_lt hn,
+end
 
 lemma not_negative_subset (hi : ¬ s.negative i) (h : i ⊆ j) : ¬ s.negative j := 
 λ h', hi $ negative_subset_negative h' h
@@ -244,17 +248,47 @@ begin
     exact id }
 end
 
--- lemma aux_lt'' {n : ℕ} (hn : ∀ k < n, _) 
-
--- lemma aux_lt (h : ∀ n : ℕ, ¬ s.negative (s.aux i n)) (n : ℕ) : 
---   (1 / (s.aux₀ (s.aux i n) + 1) : ℝ) < s.measure_of (s.aux i (n + 1)) :=
--- begin
---   cases n,
---   { rw aux, convert aux₁_lt (h 0),
-    
---    },
---   { rw aux, exact aux₁_lt (h (n + 1)) }
--- end
+lemma exists_positive_set' (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) 
+  (hn : ¬ ∀ n : ℕ, ¬ s.negative (i \ ⋃ l < n, s.aux i l)) : 
+  ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.negative j ∧ s.measure_of j < 0 :=
+begin
+  by_cases s.negative i,
+  { exact ⟨i, hi₁, set.subset.refl _, h, hi₂⟩ },
+  { push_neg at hn,
+    set k := nat.find hn with hk₁,
+    have hk₂ : s.negative (i \ ⋃ l < k, s.aux i l) := nat.find_spec hn,
+    have hmeas : measurable_set (⋃ (l : ℕ) (H : l < k), s.aux i l), 
+      exact (measurable_set.Union $ λ _, 
+        measurable_set.Union_Prop (λ _, aux_measurable_set _)),
+    refine ⟨i \ ⋃ l < k, s.aux i l, measurable_set.diff hi₁ hmeas, 
+            set.diff_subset _ _, hk₂, _⟩,
+    rw measure_of_diff' hmeas hi₁,
+    rw s.m_Union,
+    { have h₁ : ∀ l < k, 0 ≤ s.measure_of (s.aux i l),
+      { intros l hl,
+        exact le_of_lt (measure_of_aux hi₁ h _ 
+          (not_negative_subset (nat.find_min hn hl) (set.subset.refl _))) },
+      suffices : 0 ≤ ∑' (l : ℕ), s.measure_of (⋃ (H : l < k), s.aux i l),
+        linarith,
+      refine tsum_nonneg _,
+      intro l, by_cases l < k,
+      { convert h₁ _ h,
+        ext, 
+        rw [set.mem_Union, exists_prop, and_iff_right_iff_imp],
+        exact λ _, h },
+      { convert le_of_eq s.empty.symm,
+        ext, simp only [exists_prop, set.mem_empty_eq, set.mem_Union, not_and, iff_false],
+        exact λ h', false.elim (h h') } },
+    { intro, exact measurable_set.Union_Prop (λ _, aux_measurable_set _) },
+    { intros a b hab x hx,
+      simp only [exists_prop, set.mem_Union, set.mem_inter_eq, set.inf_eq_inter] at hx,
+      exact let ⟨⟨_, hx₁⟩, _, hx₂⟩ := hx in aux_disjoint a b hab ⟨hx₁, hx₂⟩ },
+    { apply set.Union_subset,
+      intros a x, 
+      simp only [and_imp, exists_prop, set.mem_Union],
+      intros _ hx,
+      exact aux_subset _ hx } }
+end .
 
 lemma exists_positive_set (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : 
   ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.negative j ∧ s.measure_of j < 0 :=
@@ -262,42 +296,68 @@ begin
   by_cases s.negative i,
   { exact ⟨i, hi₁, set.subset.refl _, h, hi₂⟩ },
   { by_cases hn : ∀ n : ℕ, ¬ s.negative (i \ ⋃ l < n, s.aux i l),
-    { sorry },
-    { push_neg at hn,
-      set k := nat.find hn with hk₁,
-      have hk₂ : s.negative (i \ ⋃ l < k, s.aux i l) := nat.find_spec hn,
-      have hmeas : measurable_set (⋃ (l : ℕ) (H : l < k), s.aux i l), 
-        exact (measurable_set.Union $ λ _, 
-          measurable_set.Union_Prop (λ _, aux_measurable_set _)),
-      refine ⟨i \ ⋃ l < k, s.aux i l, measurable_set.diff hi₁ hmeas, 
-              set.diff_subset _ _, hk₂, _⟩,
-      rw measure_of_diff' hmeas hi₁,
-      rw s.m_Union,
-      { have h₁ : ∀ l < k, 0 ≤ s.measure_of (s.aux i l),
-        { intros l hl,
-          exact le_of_lt (measure_of_aux hi₁ h _ 
-            (not_negative_subset (nat.find_min hn hl) (set.subset.refl _))) },
-        suffices : 0 ≤ ∑' (l : ℕ), s.measure_of (⋃ (H : l < k), s.aux i l),
-          linarith,
-        refine tsum_nonneg _,
-        intro l, by_cases l < k,
-        { convert h₁ _ h,
-          ext, 
-          rw [set.mem_Union, exists_prop, and_iff_right_iff_imp],
-          exact λ _, h },
-        { convert le_of_eq s.empty.symm,
-          ext, simp only [exists_prop, set.mem_empty_eq, set.mem_Union, not_and, iff_false],
-          exact λ h', false.elim (h h') } },
-      { intro, exact measurable_set.Union_Prop (λ _, aux_measurable_set _) },
-      { intros a b hab x hx,
-        simp only [exists_prop, set.mem_Union, set.mem_inter_eq, set.inf_eq_inter] at hx,
-        exact let ⟨⟨_, hx₁⟩, _, hx₂⟩ := hx in aux_disjoint a b hab ⟨hx₁, hx₂⟩ },
-      { apply set.Union_subset,
-        intros a x, 
-        simp only [and_imp, exists_prop, set.mem_Union],
-        intros _ hx,
-        exact aux_subset _ hx } } }
-end
+    { set A := i \ ⋃ l, s.aux i l with hA,
+      set bdd : ℕ → ℕ := λ n, s.aux₀ i (⋃ k ≤ n, s.aux i k) with hbdd,
+
+      have hn' : ∀ n : ℕ, ¬ s.negative (i \ ⋃ l ≤ n, s.aux i l),
+      { intro n, 
+        convert hn (n + 1), ext l,
+        simp only [exists_prop, set.mem_Union, and.congr_left_iff],
+        exact λ _, nat.lt_succ_iff.symm },
+      have h₁ : s.measure_of i = s.measure_of A + ∑' l, s.measure_of (s.aux i l),
+      { rw [hA, ← s.m_Union, add_comm, measure_of_diff],
+        exact measurable_set.Union (λ _, aux_measurable_set _),
+        exact hi₁,
+        exact set.Union_subset (λ _, aux_subset _),
+        exact λ _, aux_measurable_set _,
+        exact aux_disjoint },
+      have h₂ : s.measure_of A ≤ s.measure_of i,
+      { rw h₁,
+        apply le_add_of_nonneg_right,
+        exact tsum_nonneg (λ n, le_of_lt (measure_of_aux hi₁ h _ (hn n))) },
+      have h₃' : summable (λ n, (1 / (bdd n + 1) : ℝ)),
+      { have : summable (λ l, s.measure_of (s.aux i l)),
+          exact summable_measure_of (λ _, aux_measurable_set _) aux_disjoint,
+        refine summable_of_nonneg_of_le_succ _ _ this,
+        { intro _, exact le_of_lt nat.one_div_pos_of_nat },
+        { intro n, exact le_of_lt (aux_lt n (hn' n)) } },
+      have h₃ : tendsto (λ n, (bdd n : ℝ) + 1) at_top at_top,
+      { simp only [one_div] at h₃',
+        exact tendsto_top_of_pos_summable_inv h₃' (λ n, nat.cast_add_one_pos (bdd n)) },
+      have h₄ : tendsto (λ n, (bdd n : ℝ)) at_top at_top,
+      { convert at_top.tendsto_at_top_add_const_right (-1) h₃, simp },
+
+      refine ⟨A, _, _, _, _⟩,
+      { exact measurable_set.diff hi₁ (measurable_set.Union (λ _, aux_measurable_set _)) },
+      { exact set.diff_subset _ _ },
+      { by_contra hnn,
+        rw negative at hnn, push_neg at hnn,
+        obtain ⟨E, hE₁, hE₂, hE₃⟩ := hnn,
+        have : ∃ k, 1 ≤ bdd k ∧ 1 / (bdd k : ℝ) < s.measure_of E,
+        { rw tendsto_at_top_at_top at h₄,
+          obtain ⟨k, hk⟩ := h₄ (max (1 / s.measure_of E + 1) 1),
+          refine ⟨k, _, _⟩,
+          { have hle := le_of_max_le_right (hk k le_rfl),
+            norm_cast at hle,
+            exact hle },
+          { have : 1 / s.measure_of E < bdd k, linarith [le_of_max_le_left (hk k le_rfl)],
+            rw one_div at this ⊢,
+            rwa inv_lt (lt_trans (inv_pos.2 hE₃) this) hE₃,
+          } },
+        obtain ⟨k, hk₁, hk₂⟩ := this,
+        have hA' : A ⊆ i \ ⋃ l ≤ k, s.aux i l,
+        { rw hA,
+          apply set.diff_subset_diff_right,
+          intro x, simp only [set.mem_Union],
+          rintro ⟨n, _, hn₂⟩,
+          exact ⟨n, hn₂⟩ },
+        refine aux₀_min (hn' k) (nat.sub_one_lt hk₁) _,
+        refine ⟨E, set.subset.trans hE₁ hA', hE₂, _⟩,
+        convert hk₂, norm_cast,
+        exact nat.sub_add_cancel hk₁ },
+      { exact lt_of_le_of_lt h₂ hi₂ } },
+    { exact exists_positive_set' hi₁ hi₂ hn } }
+end .
 
 /-- The Hahn-decomposition thoerem. -/
 theorem exists_disjoint_positive_negative_union_eq :

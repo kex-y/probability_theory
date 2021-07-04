@@ -73,7 +73,46 @@ begin
   exact tsum_to_real_of_not_summable hf h,
 end
 
+lemma summable_succ {f : ℕ → ℝ} (hf : summable f) : summable (f ∘ nat.succ) :=
+begin
+  sorry
+end
+
+lemma summable_of_nonneg_of_le_succ {f g : ℕ → ℝ}
+  (hg : ∀ n, 0 ≤ g n) (hgf : ∀ n, g n ≤ f n.succ) (hf : summable f) : summable g :=
+summable_of_nonneg_of_le hg hgf $ summable_succ hf
+
 end tsum
+
+section filter
+
+open filter
+
+lemma tendsto_top_of_pos_summable_inv {f : ℕ → ℝ} 
+  (hf : summable f⁻¹) (hf' : ∀ n, 0 < f n) : tendsto f at_top at_top :=
+begin
+  rw [show  f = f⁻¹⁻¹, by { ext, simp }],
+  apply filter.tendsto.inv_tendsto_zero,
+  apply tendsto_nhds_within_of_tendsto_nhds_of_eventually_within _ 
+    (summable.tendsto_at_top_zero hf),
+  rw eventually_iff_exists_mem,
+  refine ⟨set.Ioi 0, Ioi_mem_at_top _, λ _ _, _⟩,
+  rw [set.mem_Ioi, inv_eq_one_div, one_div, pi.inv_apply, _root_.inv_pos],
+  exact hf' _,
+end
+
+end filter
+
+section nat
+
+lemma nat.sub_one_lt {n : ℕ} (hn : 1 ≤ n) : n - 1 < n :=
+begin
+  induction n with k hk,
+  { norm_num at hn },
+  { rw [nat.succ_sub_succ_eq_sub, nat.sub_zero], exact lt_add_one k }
+end
+
+end nat
 
 section set
 
