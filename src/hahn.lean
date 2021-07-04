@@ -55,8 +55,8 @@ begin
   intros a ha₁ ha₂,
   have h₁ := measurable_set.inter ha₂ hi₁,
   have h₂ := measurable_set.diff (measurable_set.inter ha₂ hj₁) h₁,
-  rw [← set.union_inter_sdiff_eq ha₁, 
-      measure_of_union (set.union_inter_sdiff_disjoint ha₁) h₁ h₂],
+  rw [← set.union_inter_diff_eq ha₁, 
+      measure_of_union set.union_inter_diff_disjoint h₁ h₂],
   refine add_nonneg (hi₂ _ (a.inter_subset_right i) h₁) _,
   exact hj₂ _ (set.subset.trans ((a ∩ j).diff_subset (a ∩ i)) (a.inter_subset_right j)) h₂,
 end
@@ -68,10 +68,25 @@ begin
   intros a ha₁ ha₂,
   have h₁ := measurable_set.inter ha₂ hi₁,
   have h₂ := measurable_set.diff (measurable_set.inter ha₂ hj₁) h₁,
-  rw [← set.union_inter_sdiff_eq ha₁, 
-      measure_of_union (set.union_inter_sdiff_disjoint ha₁) h₁ h₂],
+  rw [← set.union_inter_diff_eq ha₁, 
+      measure_of_union set.union_inter_diff_disjoint h₁ h₂],
   refine add_nonpos (hi₂ _ (a.inter_subset_right i) h₁) _,
   exact hj₂ _ (set.subset.trans ((a ∩ j).diff_subset (a ∩ i)) (a.inter_subset_right j)) h₂,
+end
+
+lemma negative_Union_negative {f : ℕ → set α} 
+  (hf₁ : ∀ n, measurable_set (f n)) (hf₂ : ∀ n, s.negative (f n)) : 
+  s.negative ⋃ n, f n :=
+begin
+  intros a ha₁ ha₂,
+  rw [← set.Union_inter_diff_eq ha₁, s.m_Union _ set.Union_inter_diff_disjoint],
+  refine tsum_nonpos (λ n, hf₂ n _ _ _),
+  { exact set.subset.trans (set.diff_subset _ _) (set.inter_subset_right _ _) },
+  { refine measurable_set.diff (measurable_set.inter ha₂ (hf₁ n)) _,
+    exact measurable_set.Union (λ m, measurable_set.Union_Prop (λ _, hf₁ m)) }, 
+  { intro n,
+    refine measurable_set.diff (measurable_set.inter ha₂ (hf₁ n)) _,
+    exact measurable_set.Union (λ m, measurable_set.Union_Prop (λ _, hf₁ m)) }
 end
 
 lemma exists_pos_measure_of_not_negative (hi : ¬ s.negative i) : 
@@ -82,6 +97,8 @@ begin
   obtain ⟨j, hj₁, hj₂, hj⟩ := hi,
   exact ⟨j, hj₁, hj₂, hj⟩,
 end
+
+section exists_negative_set
 
 def p (s : signed_measure α) (i j : set α) (n : ℕ) : Prop := 
 ∃ (k : set α) (hj₁ : k ⊆ i \ j) (hj₂ : measurable_set k), (1 / (n + 1) : ℝ) < s.measure_of k
@@ -248,7 +265,7 @@ begin
     exact id }
 end
 
-lemma exists_positive_set' (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) 
+lemma exists_negative_set' (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) 
   (hn : ¬ ∀ n : ℕ, ¬ s.negative (i \ ⋃ l < n, s.aux i l)) : 
   ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.negative j ∧ s.measure_of j < 0 :=
 begin
@@ -290,7 +307,7 @@ begin
       exact aux_subset _ hx } }
 end .
 
-lemma exists_positive_set (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : 
+lemma exists_negative_set (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : 
   ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.negative j ∧ s.measure_of j < 0 :=
 begin
   by_cases s.negative i,
@@ -356,8 +373,10 @@ begin
         convert hk₂, norm_cast,
         exact nat.sub_add_cancel hk₁ },
       { exact lt_of_le_of_lt h₂ hi₂ } },
-    { exact exists_positive_set' hi₁ hi₂ hn } }
+    { exact exists_negative_set' hi₁ hi₂ hn } }
 end .
+
+end exists_negative_set
 
 /-- The Hahn-decomposition thoerem. -/
 theorem exists_disjoint_positive_negative_union_eq :

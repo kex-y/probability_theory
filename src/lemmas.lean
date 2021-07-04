@@ -131,7 +131,7 @@ begin
     { exact ⟨i, hi⟩ } }
 end
 
-lemma set.union_inter_sdiff_eq {a b c : set α} (habc : a ⊆ b ∪ c) : 
+lemma set.union_inter_diff_eq {a b c : set α} (habc : a ⊆ b ∪ c) : 
   a ∩ b ∪ a ∩ c \ (a ∩ b) = a :=
 begin
   ext x, split,
@@ -145,11 +145,34 @@ begin
       exacts [false.elim (h  ha'), ⟨⟨ha, ha'⟩, not_and.2 (λ _, h)⟩] } }
 end
 
-lemma set.union_inter_sdiff_disjoint {a b c : set α} (habc : a ⊆ b ∪ c) : 
+lemma set.union_inter_diff_disjoint {a b c : set α} : 
   disjoint (a ∩ b) (a ∩ c \ (a ∩ b)) := 
 begin
   rintro x ⟨⟨hxa, hxb⟩, _, hxab⟩,
   exact hxab ⟨hxa, hxb⟩,
+end
+
+lemma set.Union_inter_diff_eq {f : ℕ → set α} {a : set α} (ha : a ⊆ ⋃ n, f n) : 
+  (⋃ n, a ∩ f n \ ⋃ k < n, f k) = a :=
+begin
+  ext x, 
+  simp only [not_exists, exists_prop, mem_Union, mem_inter_eq, not_and, mem_diff],
+  split,
+  { rintro ⟨_, ⟨_, _⟩, _⟩, assumption },
+  { intro hx,
+    let n := nat.find (mem_Union.1 (ha hx)),
+    exact ⟨n, ⟨hx, nat.find_spec (mem_Union.1 (ha hx))⟩, λ m hm, nat.find_min _ hm⟩ }
+end
+
+lemma set.Union_inter_diff_disjoint {f : ℕ → set α} {a : set α} : 
+  pairwise $ disjoint on (λ n,  a ∩ f n \ ⋃ k < n, f k) :=
+begin
+  rintro n m hnm x ⟨⟨hxn₁, hxn₂⟩, hxm₁, hxm₂⟩,
+  simp only [not_exists, exists_prop, mem_Union, mem_empty_eq, mem_inter_eq, 
+             not_and, bot_eq_empty, ne.def] at *,
+  rcases lt_or_gt_of_ne hnm with (h | h),
+  { exact hxm₂ _ h hxn₁.2 },
+  { exact hxn₂ _ h hxm₁.2 }
 end
 
 end set
