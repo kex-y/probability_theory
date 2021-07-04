@@ -231,8 +231,7 @@ end
 lemma not_negative_subset (hi : ¬ s.negative i) (h : i ⊆ j) : ¬ s.negative j := 
 λ h', hi $ negative_subset_negative h' h
 
-lemma measure_of_aux 
-  (hi₁ : measurable_set i) (hi₂ : ¬ s.negative i)
+lemma measure_of_aux (hi₂ : ¬ s.negative i)
   (n : ℕ) (hn : ¬ s.negative (i \ ⋃ k < n, s.aux i k)) : 
   0 < s.measure_of (s.aux i n) :=
 begin
@@ -292,7 +291,7 @@ begin
     exact id }
 end
 
-lemma exists_negative_set' (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) 
+private lemma exists_negative_set' (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) 
   (hn : ¬ ∀ n : ℕ, ¬ s.negative (i \ ⋃ l < n, s.aux i l)) : 
   ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.negative j ∧ s.measure_of j < 0 :=
 begin
@@ -310,7 +309,7 @@ begin
     rw s.m_Union,
     { have h₁ : ∀ l < k, 0 ≤ s.measure_of (s.aux i l),
       { intros l hl,
-        exact le_of_lt (measure_of_aux hi₁ h _ 
+        exact le_of_lt (measure_of_aux h _ 
           (not_negative_subset (nat.find_min hn hl) (set.subset.refl _))) },
       suffices : 0 ≤ ∑' (l : ℕ), s.measure_of (⋃ (H : l < k), s.aux i l),
         linarith,
@@ -334,7 +333,8 @@ begin
       exact aux_subset _ hx } }
 end .
 
-lemma exists_negative_set (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : 
+/-- A measurable set of negative measure has a negative subset of negative measure. -/
+theorem exists_negative_set (hi₁ : measurable_set i) (hi₂ : s.measure_of i < 0) : 
   ∃ (j : set α) (hj₁ : measurable_set j) (hj₂ : j ⊆ i), s.negative j ∧ s.measure_of j < 0 :=
 begin
   by_cases s.negative i,
@@ -356,7 +356,7 @@ begin
       have h₂ : s.measure_of A ≤ s.measure_of i,
       { rw h₁,
         apply le_add_of_nonneg_right,
-        exact tsum_nonneg (λ n, le_of_lt (measure_of_aux hi₁ h _ (hn n))) },
+        exact tsum_nonneg (λ n, le_of_lt (measure_of_aux h _ (hn n))) },
       have h₃' : summable (λ n, (1 / (bdd n + 1) : ℝ)),
       { have : summable (λ l, s.measure_of (s.aux i l)),
           exact summable_measure_of (λ _, aux_measurable_set _) aux_disjoint,
@@ -403,14 +403,16 @@ end .
 
 end exists_negative_set
 
+/-- The set of measurable negative sets. -/
 def negatives (s : signed_measure α) : set (set α) := 
   { B | ∃ (hB₁ : measurable_set B), s.negative B }
 
+/-- The set of measures of the set of measurable negative sets. -/
 def measure_of_negatives (s : signed_measure α) : set ℝ := 
-  { t | ∃ B ∈ s.negatives, t = s.measure_of B }
+  s.measure_of '' s.negatives
 
 lemma zero_mem_measure_of_negatives : (0 : ℝ) ∈ s.measure_of_negatives :=
-⟨∅, ⟨measurable_set.empty, empty_negative⟩, s.empty.symm⟩
+⟨∅, ⟨measurable_set.empty, empty_negative⟩, s.empty⟩
 
 lemma measure_of_negatives_bdd_below : 
   ∃ x, ∀ y ∈ s.measure_of_negatives, x ≤ y :=
@@ -421,7 +423,7 @@ begin
   have hf' : ∀ n : ℕ, ∃ B ∈ s.negatives, s.measure_of B < -n,
   { intro n,
     rcases hf n with ⟨⟨B, hB₁, hB₂⟩, hlt⟩,
-    exact ⟨B, hB₁, hB₂ ▸ hlt⟩ },
+    exact ⟨B, hB₁, hB₂.symm ▸ hlt⟩ },
   choose B hB using hf',
   have hmeas : ∀ n, measurable_set (B n) := λ n, let ⟨h, _⟩ := (hB n).1 in h,
   set A := ⋃ n, B n with hA,
@@ -458,8 +460,7 @@ begin
   { apply has_le.le.antisymm,
     { apply le_of_le_tendsto hf₂,
       intro n,
-      rw (hB n).2,
-      rw [hA, ← set.diff_union_of_subset (set.subset_Union _ n), 
+      rw [← (hB n).2, hA, ← set.diff_union_of_subset (set.subset_Union _ n), 
       measure_of_union (disjoint.comm.1 set.disjoint_diff) _ (hB₁ n)],
       { refine add_le_of_nonpos_left _,
         have : s.negative A := negative_Union_negative hB₁ (λ m, let ⟨_, h⟩ := (hB m).1 in h),

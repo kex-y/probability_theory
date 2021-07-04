@@ -196,6 +196,8 @@ begin
     rw [not_not, this, tsum_eq_zero_of_not_summable h] },
 end
 
+/-- For all `n : ℕ`, `measure_of_nonneg_seq s f n` returns `f n` if `0 ≤ s.measure_of (f n)` 
+and `∅` otherwise. -/
 def measure_of_nonneg_seq (s : signed_measure α) (f : ℕ → set α) : ℕ → set α := 
 λ i, if 0 ≤ (s.measure_of ∘ f) i then f i else ∅
 
@@ -233,6 +235,8 @@ begin
     exact false.elim hx₁ }
 end
 
+/-- For all `n : ℕ`, `measure_of_nonneg_seq s f n` returns `f n` if `¬ 0 ≤ s.measure_of (f n)` 
+and `∅` otherwise. -/
 def measure_of_nonpos_seq (s : signed_measure α) (f : ℕ → set α) : ℕ → set α := 
 λ i, if ¬ 0 ≤ (s.measure_of ∘ f) i then f i else ∅
 
@@ -325,6 +329,7 @@ def of_measure (μ : measure α) [hμ : finite_measure μ] : signed_measure α :
     exact measure_mono (set.subset_univ _),
   end }
 
+/-- The zero signed measure. -/
 def zero : signed_measure α := of_measure 0
 
 instance : has_zero (signed_measure α) := ⟨zero⟩
@@ -377,11 +382,14 @@ instance : add_comm_group (signed_measure α) :=
   add_comm := by { intros, ext i; simp [add_comm] },
   add_left_neg := by { intros, ext i; simp } } .
 
-/-- Given two finite measures `μ, ν`, `μ - ν` is signed measure. -/
+/-- Given two finite measures `μ, ν`, `of_sub_measure μ ν` is the signed measure 
+corresponding to the function `μ - ν`. -/
 def of_sub_measure (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_measure ν] : 
   signed_measure α := 
 of_measure μ + - of_measure ν
 
+/-- Given a real number `r` and a signed measure `s`, `smul r s` is the signed 
+measure corresponding to the function `r • s.measure_of`. -/
 def smul (r : ℝ) (s : signed_measure α) : signed_measure α := 
 { measure_of := r • s.measure_of,
   empty := by simp [s.empty],
