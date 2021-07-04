@@ -73,14 +73,9 @@ begin
   exact tsum_to_real_of_not_summable hf h,
 end
 
-lemma summable_succ {f : ℕ → ℝ} (hf : summable f) : summable (f ∘ nat.succ) :=
-begin
-  sorry
-end
-
 lemma summable_of_nonneg_of_le_succ {f g : ℕ → ℝ}
   (hg : ∀ n, 0 ≤ g n) (hgf : ∀ n, g n ≤ f n.succ) (hf : summable f) : summable g :=
-summable_of_nonneg_of_le hg hgf $ summable_succ hf
+summable_of_nonneg_of_le hg hgf $ summable.comp_injective hf nat.succ_injective
 
 end tsum
 
@@ -101,6 +96,36 @@ begin
   exact hf' _,
 end
 
+lemma exists_tendsto_Inf {S : set ℝ} (hS : ∃ x, x ∈ S) (hS' : ∃ x, ∀ y ∈ S, x ≤ y) : 
+  ∃ (f : ℕ → ℝ) (hf : ∀ n, f n ∈ S), tendsto f at_top (nhds (Inf S)) :=
+begin
+  have : ∀ n : ℕ, ∃ t ∈ S, t < Inf S + 1 / (n + 1 : ℝ),
+  { exact λ n, (real.Inf_lt _ hS hS').1 ((lt_add_iff_pos_right _).2 nat.one_div_pos_of_nat) }, 
+  choose f hf using this,
+  refine ⟨f,λ n, (hf n).1, _⟩,
+  rw tendsto_iff_dist_tendsto_zero,
+  refine squeeze_zero_norm _ tendsto_one_div_add_at_top_nhds_0_nat, 
+  intro n,
+  obtain ⟨hf₁, hf₂⟩ := hf n,
+  rw [real.dist_eq, real.norm_eq_abs, abs_abs, 
+      abs_of_nonneg (sub_nonneg.2 (real.Inf_le S hS' hf₁))], 
+  linarith,
+end
+
+lemma tendsto_le_of_forall_le {f g : ℕ → ℝ} {a b : ℝ} (hfg : ∀ n, f n ≤ g n)
+  (hf : tendsto f at_top (nhds a)) (hg : tendsto g at_top (nhds b)) :
+  a ≤ b :=
+begin
+  apply le_of_tendsto_of_tendsto hf hg,
+  rw [eventually_le, eventually_iff_exists_mem],
+  exact ⟨set.Ioi 0, Ioi_mem_at_top _, λ n _, hfg n⟩,
+end
+
+lemma le_of_le_tendsto {f : ℕ → ℝ} {a b : ℝ}
+  (hf₁ : tendsto f at_top (nhds b)) (hf₂ : ∀ n, a ≤ f n) : a ≤ b :=
+tendsto_le_of_forall_le hf₂ tendsto_const_nhds hf₁
+
+
 end filter
 
 section nat
@@ -110,6 +135,15 @@ begin
   induction n with k hk,
   { norm_num at hn },
   { rw [nat.succ_sub_succ_eq_sub, nat.sub_zero], exact lt_add_one k }
+end
+
+lemma not_forall_le_neg_nat (a : ℝ) (ha : ∀ n : ℕ, a ≤ -n) : false :=
+begin
+  suffices : ¬ ∀ n : ℕ, a ≤ -n,
+  { exact this ha },
+  push_neg, 
+  rcases exists_nat_gt (-a) with ⟨n, hn⟩,
+  exact ⟨n, neg_lt.1 hn⟩,
 end
 
 end nat

@@ -26,6 +26,18 @@ def negative (s : signed_measure α) (i : set α) : Prop :=
 
 variables {s : signed_measure α} {i j : set α}
 
+lemma empty_positive : s.positive ∅ :=
+begin
+  intros j hj _,
+  rw [set.subset_eq_empty hj rfl, s.empty],
+end
+
+lemma empty_negative : s.negative ∅ :=
+begin
+  intros j hj _,
+  rw [set.subset_eq_empty hj rfl, s.empty],
+end
+
 lemma positive_nonneg_measure (hi₁ : measurable_set i) (hi₂ : s.positive i) : 
   0 ≤ s.measure_of i := 
 hi₂ i set.subset.rfl hi₁
@@ -59,6 +71,21 @@ begin
       measure_of_union set.union_inter_diff_disjoint h₁ h₂],
   refine add_nonneg (hi₂ _ (a.inter_subset_right i) h₁) _,
   exact hj₂ _ (set.subset.trans ((a ∩ j).diff_subset (a ∩ i)) (a.inter_subset_right j)) h₂,
+end
+
+lemma positive_Union_negative {f : ℕ → set α} 
+  (hf₁ : ∀ n, measurable_set (f n)) (hf₂ : ∀ n, s.positive (f n)) : 
+  s.positive ⋃ n, f n :=
+begin
+  intros a ha₁ ha₂,
+  rw [← set.Union_inter_diff_eq ha₁, s.m_Union _ set.Union_inter_diff_disjoint],
+  refine tsum_nonneg (λ n, hf₂ n _ _ _),
+  { exact set.subset.trans (set.diff_subset _ _) (set.inter_subset_right _ _) },
+  { refine measurable_set.diff (measurable_set.inter ha₂ (hf₁ n)) _,
+    exact measurable_set.Union (λ m, measurable_set.Union_Prop (λ _, hf₁ m)) }, 
+  { intro n,
+    refine measurable_set.diff (measurable_set.inter ha₂ (hf₁ n)) _,
+    exact measurable_set.Union (λ m, measurable_set.Union_Prop (λ _, hf₁ m)) }
 end
 
 lemma negative_union_negative
@@ -324,10 +351,8 @@ begin
       have h₁ : s.measure_of i = s.measure_of A + ∑' l, s.measure_of (s.aux i l),
       { rw [hA, ← s.m_Union, add_comm, measure_of_diff],
         exact measurable_set.Union (λ _, aux_measurable_set _),
-        exact hi₁,
-        exact set.Union_subset (λ _, aux_subset _),
-        exact λ _, aux_measurable_set _,
-        exact aux_disjoint },
+        exacts [hi₁, set.Union_subset (λ _, aux_subset _), λ _, 
+                aux_measurable_set _, aux_disjoint] },
       have h₂ : s.measure_of A ≤ s.measure_of i,
       { rw h₁,
         apply le_add_of_nonneg_right,
@@ -378,13 +403,85 @@ end .
 
 end exists_negative_set
 
-/-- The Hahn-decomposition thoerem. -/
+def negatives (s : signed_measure α) : set (set α) := 
+  { B | ∃ (hB₁ : measurable_set B), s.negative B }
+
+def measure_of_negatives (s : signed_measure α) : set ℝ := 
+  { t | ∃ B ∈ s.negatives, t = s.measure_of B }
+
+lemma zero_mem_measure_of_negatives : (0 : ℝ) ∈ s.measure_of_negatives :=
+⟨∅, ⟨measurable_set.empty, empty_negative⟩, s.empty.symm⟩
+
+lemma measure_of_negatives_bdd_below : 
+  ∃ x, ∀ y ∈ s.measure_of_negatives, x ≤ y :=
+begin
+  by_contra, push_neg at h,
+  have h' : ∀ n : ℕ, ∃ y : ℝ, y ∈ s.measure_of_negatives ∧ y < -n := λ n, h (-n),
+  choose f hf using h',
+  have hf' : ∀ n : ℕ, ∃ B ∈ s.negatives, s.measure_of B < -n,
+  { intro n,
+    rcases hf n with ⟨⟨B, hB₁, hB₂⟩, hlt⟩,
+    exact ⟨B, hB₁, hB₂ ▸ hlt⟩ },
+  choose B hB using hf',
+  have hmeas : ∀ n, measurable_set (B n) := λ n, let ⟨h, _⟩ := (hB n).1 in h,
+  set A := ⋃ n, B n with hA,
+  refine not_forall_le_neg_nat (s.measure_of A) (λ n, _),
+  refine le_trans _ (le_of_lt (hB n).2),
+  rw [hA, ← set.diff_union_of_subset (set.subset_Union _ n), 
+      measure_of_union (disjoint.comm.1 set.disjoint_diff) _ (hmeas n)],
+  { refine add_le_of_nonpos_left _,
+    have : s.negative A := negative_Union_negative hmeas (λ m, let ⟨_, h⟩ := (hB m).1 in h),
+    refine negative_nonpos_measure _ (negative_subset_negative this (set.diff_subset _ _)),
+    refine measurable_set.diff (measurable_set.Union hmeas) (hmeas n) },
+  { exact measurable_set.diff (measurable_set.Union hmeas) (hmeas n) },
+end
+
+/-- The Hahn-decomposition thoerem: Given the signed measure `s`, there exists 
+disjoint measurable sets `i`, `j` such that `i` is positive, `j` is negative 
+and `i ∪ j = set.univ`.  -/
 theorem exists_disjoint_positive_negative_union_eq :
   ∃ (i j : set α) (hi₁ : measurable_set i) (hi₂ : s.positive i) 
                   (hj₁ : measurable_set j) (hj₂ : s.negative j), 
   disjoint i j ∧ i ∪ j = set.univ :=
 begin
-  sorry
+  obtain ⟨f, hf₁, hf₂⟩ := exists_tendsto_Inf 
+    ⟨0, @zero_mem_measure_of_negatives _ _ s⟩ measure_of_negatives_bdd_below,
+
+  choose B hB using hf₁,
+  have hB₁ : ∀ n, measurable_set (B n) := λ n, let ⟨h, _⟩ := (hB n).1 in h,
+  have hB₂ : ∀ n, s.negative (B n) := λ n, let ⟨_, h⟩ := (hB n).1 in h,
+
+  set A := ⋃ n, B n with hA,
+  have hA₁ : measurable_set A := measurable_set.Union hB₁,
+  have hA₂ : s.negative A := negative_Union_negative hB₁ hB₂,
+  have hA₃ : s.measure_of A = Inf s.measure_of_negatives,
+  { apply has_le.le.antisymm,
+    { apply le_of_le_tendsto hf₂,
+      intro n,
+      rw (hB n).2,
+      rw [hA, ← set.diff_union_of_subset (set.subset_Union _ n), 
+      measure_of_union (disjoint.comm.1 set.disjoint_diff) _ (hB₁ n)],
+      { refine add_le_of_nonpos_left _,
+        have : s.negative A := negative_Union_negative hB₁ (λ m, let ⟨_, h⟩ := (hB m).1 in h),
+        refine negative_nonpos_measure _ (negative_subset_negative this (set.diff_subset _ _)),
+        refine measurable_set.diff (measurable_set.Union hB₁) (hB₁ n) },
+      { exact measurable_set.diff (measurable_set.Union hB₁) (hB₁ n) } },
+    { exact real.Inf_le _ measure_of_negatives_bdd_below ⟨A, ⟨hA₁, hA₂⟩, rfl⟩ } },
+
+  refine ⟨Aᶜ, A, measurable_set.compl hA₁, _, hA₁, hA₂, 
+          disjoint_compl_left, (set.union_comm A Aᶜ) ▸ set.union_compl_self A⟩,
+  intros C hC hC₁, 
+  by_contra hC₂, push_neg at hC₂,
+  rcases exists_negative_set hC₁ hC₂ with ⟨D, hD₁, hD, hD₂, hD₃⟩,
+
+  have : s.measure_of (A ∪ D) < Inf s.measure_of_negatives,
+  { rw [← hA₃, measure_of_union (set.disjoint_of_subset_right (set.subset.trans hD hC) 
+        disjoint_compl_right) hA₁ hD₁], 
+    linarith },
+  refine not_le.2 this _,
+  refine real.Inf_le _ measure_of_negatives_bdd_below ⟨A ∪ D, ⟨_, _⟩, rfl⟩,
+  { exact measurable_set.union hA₁ hD₁ },
+  { exact negative_union_negative hA₁ hA₂ hD₁ hD₂ }
 end
 
 end signed_measure
