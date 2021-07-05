@@ -31,17 +31,23 @@ theorem exists_sigular_sub (s : signed_measure α) :
   ∃ (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_measure ν], 
     μ ⊥ ν ∧ s = @of_sub_measure _ _ μ ν hμ hν :=
 begin
-  obtain ⟨i, j, hi₁, hi₂, hj₁, hj₂, hdisj, huniv⟩ := 
-    s.exists_disjoint_positive_negative_union_eq,
-  refine ⟨s.positive_to_measure i hi₁ hi₂, s.negative_to_measure j hj₁ hj₂, _⟩,
-  refine ⟨positive_to_measure_finite hi₁ hi₂, negative_to_measure_finite hj₁ hj₂, _, _⟩,
-  { refine ⟨j, hj₁, _, _⟩,
-    { simp_rw [positive_to_measure_apply _ _ hj₁, 
-               set.disjoint_iff_inter_eq_empty.1 hdisj, s.measure_of_empty], refl },
-    { simp_rw [negative_to_measure_apply _ _ (measurable_set.compl hj₁), 
+  obtain ⟨i, hi₁, hi₂, hi₃⟩ := s.exists_compl_positive_negative,
+  have hi₄ := measurable_set.compl hi₁,
+  refine ⟨s.positive_to_measure i hi₁ hi₂, s.negative_to_measure iᶜ hi₄ hi₃, _⟩,
+  refine ⟨positive_to_measure_finite hi₁ hi₂, negative_to_measure_finite hi₄ hi₃, _, _⟩,
+  { refine ⟨iᶜ, hi₄, _, _⟩,
+    { simp_rw [positive_to_measure_apply _ _ hi₄, 
+               set.inter_compl_self, s.measure_of_empty], refl },
+    { simp_rw [negative_to_measure_apply _ _ (measurable_set.compl hi₄), 
                set.inter_compl_self, s.measure_of_empty, neg_zero], refl } },
-  { ext,
-    sorry }
+  { ext k hk,
+    rw [of_sub_measure_apply hk, positive_to_measure_apply hi₁ hi₂ hk, 
+        negative_to_measure_apply hi₄ hi₃ hk],
+    simp only [ennreal.coe_to_real, subtype.coe_mk, ennreal.some_eq_coe, sub_neg_eq_add],
+    rw [← measure_of_union _ (measurable_set.inter hi₁ hk) (measurable_set.inter hi₄ hk), 
+        set.inter_comm i, set.inter_comm iᶜ, set.inter_union_compl _ _],
+    rintro x ⟨⟨hx₁, _⟩, hx₂, _⟩,
+    exact false.elim (hx₂ hx₁) }
 end
 
 

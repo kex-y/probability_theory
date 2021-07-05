@@ -18,6 +18,7 @@ that maps the empty set to zero. -/
 structure signed_measure (α : Type*) [measurable_space α] :=
 (measure_of : set α → ℝ)
 (empty : measure_of ∅ = 0)
+(not_measurable ⦃i : set α⦄ : ¬ measurable_set i → measure_of i = 0)
 (m_Union ⦃f : ℕ → set α⦄ :
   (∀ i, measurable_set (f i)) → pairwise (disjoint on f) → 
   measure_of (⋃ i, f i) = ∑' i, measure_of (f i))
@@ -25,31 +26,44 @@ structure signed_measure (α : Type*) [measurable_space α] :=
 instance : has_coe_to_fun (signed_measure α) := 
 ⟨λ _, set α → ℝ, signed_measure.measure_of⟩
 
-class faithful (s : signed_measure α) := 
-(is_faithful : ∀ i : set α, ¬ measurable_set i → s i = 0)
-
 open set measure_theory
 
 namespace signed_measure
 
 variables {s : signed_measure α} {f : ℕ → set α}
 
+lemma apply (s : signed_measure α) (i : set α) : s i = s.measure_of i := rfl 
+
 @[simp]
 lemma measure_of_empty (s : signed_measure α) : s ∅ = 0 := s.empty
+
+lemma measure_of_not_measurable_set (s : signed_measure α) 
+  {i : set α} (hi : ¬ measurable_set i) : s i = 0 := s.not_measurable hi
 
 lemma measure_of_disjoint_Union (s : signed_measure α)
   (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) :
   s (⋃ i, f i) = ∑' i, s (f i) := s.m_Union hf₁ hf₂
 
-lemma ext_iff (s t : signed_measure α) : 
+lemma ext_iff' (s t : signed_measure α) : 
   s = t ↔ ∀ i : set α, s i = t i :=
 begin
   cases s, cases t, simpa [function.funext_iff], 
 end
 
-@[ext]
-lemma ext {s t : signed_measure α} 
-  (h : ∀ i : set α, s i = t i) : s = t :=
+lemma ext_iff (s t : signed_measure α) : 
+  s = t ↔ ∀ i : set α, measurable_set i → s i = t i :=
+begin
+  split,
+  { rintro rfl _ _, refl },
+  { rw ext_iff',
+    intros h i,
+    by_cases hi : measurable_set i,
+    { exact h i hi },
+    { simp_rw [measure_of_not_measurable_set _ hi] } } 
+end
+
+@[ext] lemma ext {s t : signed_measure α} 
+  (h : ∀ i : set α, measurable_set i → s i = t i) : s = t :=
 (ext_iff s t).2 h
 
 lemma measure_Union [encodable β] {f : β → set α}
@@ -301,18 +315,29 @@ end
 
 /-- A finite measure coerced into a real function is a signed measure. -/
 def of_measure (μ : measure α) [hμ : finite_measure μ] : signed_measure α := 
-{ measure_of := ennreal.to_real ∘ μ.measure_of,
+{ measure_of := λ i : set α, if measurable_set i then (μ.measure_of i).to_real else 0,
   empty := by simp [μ.empty],
+  not_measurable := λ _ hi, if_neg hi,
   m_Union := 
   begin
     intros _ hf₁ hf₂,
-    rw [function.comp_apply, μ.m_Union hf₁ hf₂, tsum_to_real],
-    intros a ha,
-    apply ne_of_lt hμ.measure_univ_lt_top,
-    rw [eq_top_iff, ← ha, outer_measure.measure_of_eq_coe, 
-        coe_to_outer_measure],
-    exact measure_mono (set.subset_univ _),
+    rw [μ.m_Union hf₁ hf₂, tsum_to_real, if_pos (measurable_set.Union hf₁)],
+    { congr, ext n, rw if_pos (hf₁ n) },
+    { intros a ha,
+      apply ne_of_lt hμ.measure_univ_lt_top,
+      rw [eq_top_iff, ← ha, outer_measure.measure_of_eq_coe, coe_to_outer_measure],
+      exact measure_mono (set.subset_univ _) }
   end }
+
+lemma of_measure_apply_measurable {μ : measure α} [finite_measure μ] 
+  {i : set α} (hi : measurable_set i) : 
+  of_measure μ i = (μ i).to_real := 
+if_pos hi
+
+lemma of_measure_apply_not_measurable {μ : measure α} [finite_measure μ] 
+  {i : set α} (hi : ¬ measurable_set i) : 
+  of_measure μ i = 0 := 
+if_neg hi
 
 /-- The zero signed measure. -/
 def zero : signed_measure α := of_measure 0
@@ -321,12 +346,18 @@ instance : has_zero (signed_measure α) := ⟨zero⟩
 instance : inhabited (signed_measure α) := ⟨0⟩
 
 @[simp]
-lemma zero_apply (i : set α) : (0 : signed_measure α) i = 0 := rfl
+lemma zero_apply (i : set α) : (0 : signed_measure α) i = 0 := 
+begin
+  by_cases measurable_set i,
+  { exact of_measure_apply_measurable h },
+  { exact of_measure_apply_not_measurable h }
+end
 
 /-- The negative of a signed measure is a signed measure. -/
 def neg (s : signed_measure α) : signed_measure α := 
 { measure_of := -s,
   empty := by simp [s.empty],
+  not_measurable := λ _ hi, by simp [s.measure_of_not_measurable_set hi],
   m_Union := 
   begin
     intros f hf₁ hf₂,
@@ -339,6 +370,8 @@ def neg (s : signed_measure α) : signed_measure α :=
 def add (s t : signed_measure α) : signed_measure α := 
 { measure_of := s + t,
   empty := by simp [s.empty, t.empty],
+  not_measurable := λ _ hi,
+    by simp [s.measure_of_not_measurable_set hi, t.measure_of_not_measurable_set hi],
   m_Union := 
   begin
     intros f hf₁ hf₂,
@@ -374,11 +407,20 @@ def of_sub_measure (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_
   signed_measure α := 
 of_measure μ + - of_measure ν
 
+lemma of_sub_measure_apply {μ ν : measure α} [finite_measure μ] [finite_measure ν] 
+  {i : set α} (hi : measurable_set i) : 
+  of_sub_measure μ ν i = (μ i).to_real - (ν i).to_real :=
+begin
+  rw [of_sub_measure, add_apply, neg_apply, of_measure_apply_measurable hi, 
+      of_measure_apply_measurable hi, sub_eq_add_neg]
+end
+
 /-- Given a real number `r` and a signed measure `s`, `smul r s` is the signed 
 measure corresponding to the function `r • s`. -/
 def smul (r : ℝ) (s : signed_measure α) : signed_measure α := 
 { measure_of := r • s,
   empty := by simp,
+  not_measurable := λ _ hi, by simp [s.measure_of_not_measurable_set hi],
   m_Union := 
   begin
     intros f hf₁ hf₂,

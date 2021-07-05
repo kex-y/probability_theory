@@ -573,4 +573,16 @@ begin
   { exact negative_union_negative hA₁ hA₂ hD₁ hD₂ }
 end
 
+/-- Alternative formulation of `exists_disjoint_positive_negative_union_eq`. -/
+lemma exists_compl_positive_negative (s : signed_measure α) :
+  ∃ (i : set α) (hi₁ : measurable_set i), s.positive i ∧ s.negative iᶜ :=
+begin
+  obtain ⟨i, j, hi₁, hi₂, _, hj₂, hdisj, huniv⟩ := 
+    s.exists_disjoint_positive_negative_union_eq,
+  refine ⟨i, hi₁, hi₂, _⟩,
+  rw [set.compl_eq_univ_diff, ← huniv, 
+      set.union_diff_cancel_left (set.disjoint_iff.mp hdisj)],
+  exact hj₂,
+end
+
 end signed_measure
