@@ -50,5 +50,4 @@ begin
     exact false.elim (hx₂ hx₁) }
 end
 
-
 end signed_measure

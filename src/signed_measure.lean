@@ -121,7 +121,7 @@ lemma measure_of_Union_nonpos (hf₁ : ∀ i, measurable_set (f i))
   s (⋃ i, f i) ≤ 0 := 
 (s.measure_of_disjoint_Union hf₁ hf₂).symm ▸ tsum_nonpos hf₃
 
-lemma summable_measure_of_nonneg 
+private lemma summable_measure_of_nonneg 
   (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) 
   (hf₃ : ∀ i, 0 ≤ s (f i)) : summable (s ∘ f) :=
 begin
@@ -159,7 +159,7 @@ begin
     rw [not_not, this, tsum_eq_zero_of_not_summable h] },
 end
 
-lemma summable_measure_of_nonpos  
+private lemma summable_measure_of_nonpos  
   (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) 
   (hf₃ : ∀ i, s (f i) ≤ 0) : summable (s ∘ f) :=
 begin
@@ -304,13 +304,13 @@ begin
   simp_rw measure_of_seq_eq,
   apply summable.sub,
   { apply summable_measure_of_nonneg,
-    exact measure_of_nonneg_seq_of_measurable_set hf₁,
-    exact measure_of_nonneg_seq_of_disjoint hf₂,
-    exact measure_of_nonneg_seq_nonneg },
+    { exact measure_of_nonneg_seq_of_measurable_set hf₁ },
+    { exact measure_of_nonneg_seq_of_disjoint hf₂ },
+    { exact measure_of_nonneg_seq_nonneg } },
   { apply summable_measure_of_nonpos,
-    exact measure_of_nonpos_seq_of_measurable_set hf₁,
-    exact measure_of_nonpos_seq_of_disjoint hf₂,
-    exact measure_of_nonpos_seq_nonpos },
+    { exact measure_of_nonpos_seq_of_measurable_set hf₁ },
+    { exact measure_of_nonpos_seq_of_disjoint hf₂ },
+    { exact measure_of_nonpos_seq_nonpos } },
 end
 
 /-- A finite measure coerced into a real function is a signed measure. -/
@@ -321,7 +321,7 @@ def of_measure (μ : measure α) [hμ : finite_measure μ] : signed_measure α :
   m_Union := 
   begin
     intros _ hf₁ hf₂,
-    rw [μ.m_Union hf₁ hf₂, tsum_to_real, if_pos (measurable_set.Union hf₁)],
+    rw [μ.m_Union hf₁ hf₂, ennreal.tsum_to_real_eq, if_pos (measurable_set.Union hf₁)],
     { congr, ext n, rw if_pos (hf₁ n) },
     { intros a ha,
       apply ne_of_lt hμ.measure_univ_lt_top,
