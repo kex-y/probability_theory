@@ -22,28 +22,39 @@ structure signed_measure (α : Type*) [measurable_space α] :=
   (∀ i, measurable_set (f i)) → pairwise (disjoint on f) → 
   measure_of (⋃ i, f i) = ∑' i, measure_of (f i))
 
+instance : has_coe_to_fun (signed_measure α) := 
+⟨λ _, set α → ℝ, signed_measure.measure_of⟩
+
+class faithful (s : signed_measure α) := 
+(is_faithful : ∀ i : set α, ¬ measurable_set i → s i = 0)
+
 open set measure_theory
 
 namespace signed_measure
 
 variables {s : signed_measure α} {f : ℕ → set α}
 
-instance : has_coe_t (signed_measure α) (set α → ℝ) := ⟨measure_of⟩
+@[simp]
+lemma measure_of_empty (s : signed_measure α) : s ∅ = 0 := s.empty
+
+lemma measure_of_disjoint_Union (s : signed_measure α)
+  (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) :
+  s (⋃ i, f i) = ∑' i, s (f i) := s.m_Union hf₁ hf₂
 
 lemma ext_iff (s t : signed_measure α) : 
-  s = t ↔ ∀ i : set α, s.measure_of i = t.measure_of i :=
+  s = t ↔ ∀ i : set α, s i = t i :=
 begin
-  cases s, cases t, simp [function.funext_iff],
+  cases s, cases t, simpa [function.funext_iff], 
 end
 
 @[ext]
 lemma ext {s t : signed_measure α} 
-  (h : ∀ i : set α, s.measure_of i = t.measure_of i) : s = t :=
+  (h : ∀ i : set α, s i = t i) : s = t :=
 (ext_iff s t).2 h
 
 lemma measure_Union [encodable β] {f : β → set α}
   (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) :
-  s.measure_of (⋃ i, f i) = ∑' i, s.measure_of (f i) :=
+  s (⋃ i, f i) = ∑' i, s (f i) :=
 begin
   rw [← encodable.Union_decode₂, ← tsum_Union_decode₂],
   apply s.m_Union,
@@ -54,24 +65,24 @@ end
 
 lemma measure_of_union {A B : set α} 
   (h : disjoint A B) (hA : measurable_set A) (hB : measurable_set B) : 
-  s.measure_of (A ∪ B) = s.measure_of A + s.measure_of B :=
+  s (A ∪ B) = s A + s B :=
 begin
   rw [union_eq_Union, measure_Union, tsum_fintype, fintype.sum_bool, cond, cond],
   exacts [λ b, bool.cases_on b hB hA, pairwise_disjoint_on_bool.2 h]
 end
 
 lemma measure_of_diff {A B : set α} (hA : measurable_set A) (hB : measurable_set B) 
-  (h : A ⊆ B) : s.measure_of A + s.measure_of (B \ A) = s.measure_of B :=
+  (h : A ⊆ B) : s A + s (B \ A) = s B :=
 by rw [← measure_of_union disjoint_diff hA (hB.diff hA), union_diff_cancel h]
 
 lemma measure_of_diff' {A B : set α} (hA : measurable_set A) (hB : measurable_set B) 
-  (h : A ⊆ B) : s.measure_of (B \ A) = s.measure_of B - s.measure_of A :=
+  (h : A ⊆ B) : s (B \ A) = s B - s A :=
 by rw [← measure_of_diff hA hB h, add_sub_cancel']
 
 lemma measure_of_nonneg_disjoint_union_eq_zero {s : signed_measure α} {A B : set α}
   (h : disjoint A B) (hA₁ : measurable_set A) (hB₁ : measurable_set B)
-  (hA₂ : 0 ≤ s.measure_of A) (hB₂ : 0 ≤ s.measure_of B) 
-  (hAB : s.measure_of (A ∪ B) = 0) : s.measure_of A = 0 := 
+  (hA₂ : 0 ≤ s A) (hB₂ : 0 ≤ s B) 
+  (hAB : s (A ∪ B) = 0) : s A = 0 := 
 begin
   rw measure_of_union h hA₁ hB₁ at hAB,
   linarith,
@@ -79,32 +90,30 @@ end
 
 lemma measure_of_nonpos_disjoint_union_eq_zero {s : signed_measure α} {A B : set α}
   (h : disjoint A B) (hA₁ : measurable_set A) (hB₁ : measurable_set B)
-  (hA₂ : s.measure_of A ≤ 0) (hB₂ : s.measure_of B ≤ 0) 
-  (hAB : s.measure_of (A ∪ B) = 0) : s.measure_of A = 0 := 
+  (hA₂ : s A ≤ 0) (hB₂ : s B ≤ 0) 
+  (hAB : s (A ∪ B) = 0) : s A = 0 := 
 begin
   rw measure_of_union h hA₁ hB₁ at hAB,
   linarith,
 end
 
 lemma measure_of_Union_nonneg (hf₁ : ∀ i, measurable_set (f i)) 
-  (hf₂ : pairwise (disjoint on f)) (hf₃ : ∀ i, 0 ≤ s.measure_of (f i)) :
-  0 ≤ s.measure_of (⋃ i, f i) := 
-(s.m_Union hf₁ hf₂).symm ▸ tsum_nonneg hf₃
+  (hf₂ : pairwise (disjoint on f)) (hf₃ : ∀ i, 0 ≤ s (f i)) :
+  0 ≤ s (⋃ i, f i) := 
+(s.measure_of_disjoint_Union hf₁ hf₂).symm ▸ tsum_nonneg hf₃
 
 lemma measure_of_Union_nonpos (hf₁ : ∀ i, measurable_set (f i)) 
-  (hf₂ : pairwise (disjoint on f)) (hf₃ : ∀ i, s.measure_of (f i) ≤ 0) :
-  s.measure_of (⋃ i, f i) ≤ 0 := 
-(s.m_Union hf₁ hf₂).symm ▸ tsum_nonpos hf₃
+  (hf₂ : pairwise (disjoint on f)) (hf₃ : ∀ i, s (f i) ≤ 0) :
+  s (⋃ i, f i) ≤ 0 := 
+(s.measure_of_disjoint_Union hf₁ hf₂).symm ▸ tsum_nonpos hf₃
 
 lemma summable_measure_of_nonneg 
-  (hf₁ : ∀ i, measurable_set (f i)) 
-  (hf₂ : pairwise (disjoint on f)) 
-  (hf₃ : ∀ i, 0 ≤ s.measure_of (f i)) : 
-  summable (s.measure_of ∘ f) :=
+  (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) 
+  (hf₃ : ∀ i, 0 ≤ s (f i)) : summable (s ∘ f) :=
 begin
-  have := s.m_Union hf₁ hf₂,
-  by_cases s.measure_of (⋃ (i : ℕ), (λ (i : ℕ), f i) i) = 0,
-  { suffices : ∀ i, s.measure_of (f i) = 0,
+  have := s.measure_of_disjoint_Union hf₁ hf₂,
+  by_cases s (⋃ (i : ℕ), (λ (i : ℕ), f i) i) = 0,
+  { suffices : ∀ i, s (f i) = 0,
     { convert summable_zero, ext i, exact this i },
     intro i, rw Union_eq_union f i at h,
     have hmeas : ∀ j, measurable_set (⋃ (hi : j ≠ i), f j),
@@ -137,14 +146,12 @@ begin
 end
 
 lemma summable_measure_of_nonpos  
-  (hf₁ : ∀ i, measurable_set (f i)) 
-  (hf₂ : pairwise (disjoint on f)) 
-  (hf₃ : ∀ i, s.measure_of (f i) ≤ 0) : 
-  summable (s.measure_of ∘ f) :=
+  (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) 
+  (hf₃ : ∀ i, s (f i) ≤ 0) : summable (s ∘ f) :=
 begin
-  have := s.m_Union hf₁ hf₂,
-  by_cases s.measure_of (⋃ (i : ℕ), (λ (i : ℕ), f i) i) = 0,
-  { suffices : ∀ i, s.measure_of (f i) = 0,
+  have := s.measure_of_disjoint_Union hf₁ hf₂,
+  by_cases s (⋃ (i : ℕ), (λ (i : ℕ), f i) i) = 0,
+  { suffices : ∀ i, s (f i) = 0,
     { convert summable_zero, ext i, exact this i },
     intro i, rw Union_eq_union f i at h,
     have hmeas : ∀ j, measurable_set (⋃ (hi : j ≠ i), f j),
@@ -176,24 +183,24 @@ begin
     rw [not_not, this, tsum_eq_zero_of_not_summable h] },
 end
 
-/-- For all `n : ℕ`, `measure_of_nonneg_seq s f n` returns `f n` if `0 ≤ s.measure_of (f n)` 
+/-- For all `n : ℕ`, `measure_of_nonneg_seq s f n` returns `f n` if `0 ≤ s (f n)` 
 and `∅` otherwise. -/
 def measure_of_nonneg_seq (s : signed_measure α) (f : ℕ → set α) : ℕ → set α := 
-λ i, if 0 ≤ (s.measure_of ∘ f) i then f i else ∅
+λ i, if 0 ≤ (s ∘ f) i then f i else ∅
 
 lemma measure_of_nonneg_seq_nonneg (i : ℕ) : 
-  0 ≤ s.measure_of (s.measure_of_nonneg_seq f i) := 
+  0 ≤ s (s.measure_of_nonneg_seq f i) := 
 begin
-  by_cases 0 ≤ (s.measure_of ∘ f) i,
+  by_cases 0 ≤ (s ∘ f) i,
   { simp_rw [measure_of_nonneg_seq, if_pos h],
     exact h },
-  { simp_rw [measure_of_nonneg_seq, if_neg h, s.empty] }
+  { simp_rw [measure_of_nonneg_seq, if_neg h, s.measure_of_empty] }
 end
 
 lemma measure_of_nonneg_seq_of_measurable_set (hf : ∀ i, measurable_set (f i)) 
   (i : ℕ) : measurable_set $ measure_of_nonneg_seq s f i :=
 begin
-  by_cases 0 ≤ (s.measure_of ∘ f) i,
+  by_cases 0 ≤ (s ∘ f) i,
   { simp_rw [measure_of_nonneg_seq, if_pos h],
     exact hf i },
   { simp_rw [measure_of_nonneg_seq, if_neg h],
@@ -204,8 +211,8 @@ lemma measure_of_nonneg_seq_of_disjoint (hf : pairwise (disjoint on f)) :
   pairwise $ disjoint on (s.measure_of_nonneg_seq f) :=
 begin
   rintro i j hij x ⟨hx₁, hx₂⟩,
-  by_cases hi : 0 ≤ (s.measure_of ∘ f) i,
-  { by_cases hj : 0 ≤ (s.measure_of ∘ f) j,
+  by_cases hi : 0 ≤ (s ∘ f) i,
+  { by_cases hj : 0 ≤ (s ∘ f) j,
     { simp_rw [measure_of_nonneg_seq, if_pos hi] at hx₁,
       simp_rw [measure_of_nonneg_seq, if_pos hj] at hx₂,
       exact hf i j hij ⟨hx₁, hx₂⟩ },
@@ -215,24 +222,24 @@ begin
     exact false.elim hx₁ }
 end
 
-/-- For all `n : ℕ`, `measure_of_nonneg_seq s f n` returns `f n` if `¬ 0 ≤ s.measure_of (f n)` 
+/-- For all `n : ℕ`, `measure_of_nonneg_seq s f n` returns `f n` if `¬ 0 ≤ s (f n)` 
 and `∅` otherwise. -/
 def measure_of_nonpos_seq (s : signed_measure α) (f : ℕ → set α) : ℕ → set α := 
-λ i, if ¬ 0 ≤ (s.measure_of ∘ f) i then f i else ∅
+λ i, if ¬ 0 ≤ (s ∘ f) i then f i else ∅
 
 lemma measure_of_nonpos_seq_nonpos (i : ℕ) : 
-  s.measure_of (s.measure_of_nonpos_seq f i) ≤ 0 := 
+  s (s.measure_of_nonpos_seq f i) ≤ 0 := 
 begin
-  by_cases ¬ 0 ≤ (s.measure_of ∘ f) i,
+  by_cases ¬ 0 ≤ (s ∘ f) i,
   { simp_rw [measure_of_nonpos_seq, if_pos h],
     exact le_of_not_ge h },
-  { simp_rw [measure_of_nonpos_seq, if_neg h, s.empty] }
+  { simp_rw [measure_of_nonpos_seq, if_neg h, s.measure_of_empty] }
 end
 
 lemma measure_of_nonpos_seq_of_measurable_set (hf : ∀ i, measurable_set (f i)) 
   (i : ℕ) : measurable_set $ measure_of_nonpos_seq s f i :=
 begin
-  by_cases ¬ 0 ≤ (s.measure_of ∘ f) i,
+  by_cases ¬ 0 ≤ (s ∘ f) i,
   { simp_rw [measure_of_nonpos_seq, if_pos h],
     exact hf i },
   { simp_rw [measure_of_nonpos_seq, if_neg h],
@@ -243,8 +250,8 @@ lemma measure_of_nonpos_seq_of_disjoint (hf : pairwise (disjoint on f)) :
   pairwise $ disjoint on (s.measure_of_nonpos_seq f) :=
 begin
   rintro i j hij x ⟨hx₁, hx₂⟩,
-  by_cases hi : ¬ 0 ≤ (s.measure_of ∘ f) i,
-  { by_cases hj : ¬ 0 ≤ (s.measure_of ∘ f) j,
+  by_cases hi : ¬ 0 ≤ (s ∘ f) i,
+  { by_cases hj : ¬ 0 ≤ (s ∘ f) j,
     { simp_rw [measure_of_nonpos_seq, if_pos hi] at hx₁,
       simp_rw [measure_of_nonpos_seq, if_pos hj] at hx₂,
       exact hf i j hij ⟨hx₁, hx₂⟩ },
@@ -255,27 +262,25 @@ begin
 end
 
 lemma measure_of_seq_eq (i : ℕ) : 
-  ∥s.measure_of (f i)∥ = 
-    s.measure_of (s.measure_of_nonneg_seq f i) - 
-    s.measure_of (s.measure_of_nonpos_seq f i) :=
+  ∥s (f i)∥ = s (s.measure_of_nonneg_seq f i) - s (s.measure_of_nonpos_seq f i) :=
 begin
   rw [measure_of_nonneg_seq, measure_of_nonpos_seq],
-  by_cases 0 ≤ (s.measure_of ∘ f) i,
-  { have : ¬¬0 ≤ (s.measure_of ∘ f) i := not_not.2 h,
+  by_cases 0 ≤ (s ∘ f) i,
+  { have : ¬¬0 ≤ (s ∘ f) i := not_not.2 h,
     simp_rw [real.norm_of_nonneg h, if_pos h, if_neg this, 
-             s.empty, _root_.sub_zero] },
+             s.measure_of_empty, _root_.sub_zero] },
   { simp_rw [real.norm_of_neg (lt_of_not_ge h), if_pos h, if_neg h,
-             s.empty, _root_.zero_sub] }
+             s.measure_of_empty, _root_.zero_sub] }
 end
 
-/-- Given a signed measure `s`, `s.measure_of ∘ f` is summable for all sequence 
+/-- Given a signed measure `s`, `s ∘ f` is summable for all sequence 
 `f` of pairwise disjoint measurable sets. -/
 theorem summable_measure_of 
   (hf₁ : ∀ i, measurable_set (f i)) (hf₂ : pairwise (disjoint on f)) : 
-  summable (s.measure_of ∘ f) :=
+  summable (s ∘ f) :=
 begin
   /- 
-    It suffices to show `∑ |s.measure_of ∘ f| < ∞`.
+    It suffices to show `∑ |s ∘ f| < ∞`.
     Let `N+ := { i | s(f i) ≥ 0 }`
     and `N- := { i | s(f i) < 0 }`
     Then, `Σ i, |s ∘ f i| = ∑ i ∈ N+, s ∘ f i - ∑ i ∈ N-, s ∘ f i`
@@ -316,29 +321,30 @@ instance : has_zero (signed_measure α) := ⟨zero⟩
 instance : inhabited (signed_measure α) := ⟨0⟩
 
 @[simp]
-lemma zero_apply (i : set α) : (0 : signed_measure α).measure_of i = 0 := rfl
+lemma zero_apply (i : set α) : (0 : signed_measure α) i = 0 := rfl
 
 /-- The negative of a signed measure is a signed measure. -/
 def neg (s : signed_measure α) : signed_measure α := 
-{ measure_of := - s.measure_of,
+{ measure_of := -s,
   empty := by simp [s.empty],
   m_Union := 
   begin
     intros f hf₁ hf₂,
     change - _ = _,
-    rw [s.m_Union hf₁ hf₂, ← tsum_neg], refl,
+    rw [s.measure_of_disjoint_Union hf₁ hf₂, ← tsum_neg], refl,
     exact summable_measure_of hf₁ hf₂
   end }
 
 /-- The sum of two signed measure is a signed measure. -/
 def add (s t : signed_measure α) : signed_measure α := 
-{ measure_of := s.measure_of + t.measure_of,
+{ measure_of := s + t,
   empty := by simp [s.empty, t.empty],
   m_Union := 
   begin
     intros f hf₁ hf₂,
     simp only [pi.add_apply],
-    rw [tsum_add, s.m_Union hf₁ hf₂, t.m_Union hf₁ hf₂];
+    rw [tsum_add, s.measure_of_disjoint_Union hf₁ hf₂, 
+        t.measure_of_disjoint_Union hf₁ hf₂];
     exact summable_measure_of hf₁ hf₂
   end }
 
@@ -347,11 +353,11 @@ instance : has_neg (signed_measure α) := ⟨neg⟩
 
 @[simp]
 lemma neg_apply {s : signed_measure α} (i : set α) : 
-  (-s).measure_of i = - s.measure_of i := rfl
+  (-s) i = - s i := rfl
 
 @[simp]
 lemma add_apply {s t : signed_measure α} (i : set α) : 
-  (s + t).measure_of i = s.measure_of i + t.measure_of i := rfl
+  (s + t) i = s i + t i := rfl
 
 instance : add_comm_group (signed_measure α) := 
 { add := (+), zero := (0), 
@@ -360,7 +366,7 @@ instance : add_comm_group (signed_measure α) :=
   zero_add := by { intros, ext i; simp },
   add_zero := by { intros, ext i; simp },
   add_comm := by { intros, ext i; simp [add_comm] },
-  add_left_neg := by { intros, ext i; simp } } .
+  add_left_neg := by { intros, ext i, simp } } .
 
 /-- Given two finite measures `μ, ν`, `of_sub_measure μ ν` is the signed measure 
 corresponding to the function `μ - ν`. -/
@@ -369,14 +375,14 @@ def of_sub_measure (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_
 of_measure μ + - of_measure ν
 
 /-- Given a real number `r` and a signed measure `s`, `smul r s` is the signed 
-measure corresponding to the function `r • s.measure_of`. -/
+measure corresponding to the function `r • s`. -/
 def smul (r : ℝ) (s : signed_measure α) : signed_measure α := 
-{ measure_of := r • s.measure_of,
-  empty := by simp [s.empty],
+{ measure_of := r • s,
+  empty := by simp,
   m_Union := 
   begin
     intros f hf₁ hf₂,
-    rw [pi.smul_apply, s.m_Union hf₁ hf₂, ← tsum_smul], refl,
+    rw [pi.smul_apply, s.measure_of_disjoint_Union hf₁ hf₂, ← tsum_smul], refl,
     exact summable_measure_of hf₁ hf₂
   end }
 
@@ -384,7 +390,7 @@ instance : has_scalar ℝ (signed_measure α) := ⟨smul⟩
 
 @[simp]
 lemma smul_apply {s : signed_measure α} {r : ℝ} (i : set α) : 
-  (r • s).measure_of i = r • s.measure_of i := rfl
+  (r • s) i = r • s i := rfl
 
 instance : module ℝ (signed_measure α) := 
 { one_smul := by { intros, ext i; simp [one_smul] },

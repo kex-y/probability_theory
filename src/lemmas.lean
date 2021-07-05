@@ -77,6 +77,23 @@ lemma summable_of_nonneg_of_le_succ {f g : ℕ → ℝ}
   (hg : ∀ n, 0 ≤ g n) (hgf : ∀ n, g n ≤ f n.succ) (hf : summable f) : summable g :=
 summable_of_nonneg_of_le hg hgf $ summable.comp_injective hf nat.succ_injective
 
+lemma nnreal.summable_coe_of_summable {f : ℕ → ℝ} 
+  (hf₁ : ∀ n, 0 ≤ f n) (hf₂ : summable f) : 
+  @summable (ℝ≥0) _ _ _ (λ n, ⟨f n, hf₁ n⟩) :=
+begin
+  lift f to ℕ → ℝ≥0, -- using hf₁ doesn't work here
+  { exact nnreal.summable_coe.mp hf₂ },
+  { exact hf₁ }
+end
+
+lemma nnreal.tsum_coe_eq_of_nonneg {f : ℕ → ℝ} (hf₁ : ∀ n, 0 ≤ f n) :
+  (∑' n, ⟨f n, hf₁ n⟩ : ℝ≥0) = ⟨∑' n, f n, tsum_nonneg hf₁⟩ :=
+begin
+  lift f to ℕ → ℝ≥0,
+  { simp_rw [← nnreal.coe_tsum, subtype.coe_eta] },
+  { exact hf₁ }
+end
+
 end tsum
 
 section filter
