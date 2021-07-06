@@ -178,3 +178,56 @@ lemma real.norm_of_neg {x : ℝ} (hx : x < 0) : ∥x∥ = -x :=
 abs_of_neg hx
 
 end real
+
+section nnreal
+
+lemma nnreal.eq_zero_of_le_pos (a : ℝ≥0) (ha : ∀ b : ℝ≥0, 0 < b → a ≤ b) : a = 0 :=
+begin
+  by_contra,
+  have := ha (a / 2) (nnreal.half_pos (zero_lt_iff.2 h)),
+  rw ← @not_not (a ≤ a / 2) at this,
+  exact this (not_le.2 (nnreal.half_lt_self h)),
+end
+
+lemma nnreal.eq_zero_of_le_one_div_nat_plus_one {a b : ℝ≥0} 
+  (h : ∀ n : ℕ, a ≤ (1 / (n + 1)) * b) : a = 0 :=
+begin
+  by_cases hb : 0 < b,
+  { have hb₁ : (0 : ℝ) < b⁻¹, { rw _root_.inv_pos, exact hb },
+    apply nnreal.eq_zero_of_le_pos,
+    intros c hc, 
+    have : ∃ n : ℕ, 1 / (n + 1 : ℝ) < c * b⁻¹, refine exists_nat_one_div_lt _,
+    { refine mul_pos hc _,
+      rw _root_.inv_pos, exact hb },
+    rcases this with ⟨n, hn⟩,
+    have h' : 1 / (↑n + 1) * b < c,
+    { rw [← nnreal.coe_lt_coe, ← mul_lt_mul_right hb₁, nnreal.coe_mul, mul_assoc, 
+          ← nnreal.coe_inv, ← nnreal.coe_mul, _root_.mul_inv_cancel, ← nnreal.coe_mul, 
+          mul_one, nnreal.coe_inv],
+      { convert hn, simp },
+      { exact ne.symm (ne_of_lt hb) } },
+    exact le_trans (h n) (le_of_lt h') },
+  { rw [not_lt, le_zero_iff] at hb,
+    specialize h 0,
+    rw [hb, mul_zero] at h,
+    exact le_zero_iff.1 h }
+end
+
+end nnreal
+
+section ennreal
+
+lemma ennreal.eq_zero_of_le_one_div_nat_plus_one {a b : ℝ≥0∞}
+  (hat : a ≠ ⊤) (hbt : b ≠ ⊤)
+  (h : ∀ n : ℕ, a ≤ (1 / (n + 1)) * b) : a = 0 :=
+begin
+  lift a to ℝ≥0 using hat,
+  lift b to ℝ≥0 using hbt,
+  rw ennreal.coe_eq_zero,
+  apply nnreal.eq_zero_of_le_one_div_nat_plus_one,
+  intro n,
+  rw [← ennreal.coe_le_coe, ennreal.coe_mul],
+  convert h n, simp,
+end
+
+end ennreal
