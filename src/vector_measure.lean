@@ -39,7 +39,7 @@ variables {α β : Type*} [measurable_space α]
 /-- A signed measure on a measurable space `α` is a σ-additive, real-valued function 
 that maps the empty set to zero. -/
 structure vector_measure (α : Type*) [measurable_space α] (R : Type*) [ring R] 
-  (M : Type*) [add_comm_monoid M] [module R M] [topological_space M]:=
+  (M : Type*) [add_comm_monoid M] [module R M] [topological_space M] :=
 (measure_of : set α → M)
 (empty : measure_of ∅ = 0)
 (not_measurable ⦃i : set α⦄ : ¬ measurable_set i → measure_of i = 0)
