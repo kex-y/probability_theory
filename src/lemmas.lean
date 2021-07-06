@@ -63,7 +63,7 @@ begin
   have : ∀ n : ℕ, ∃ t ∈ S, t < Inf S + 1 / (n + 1 : ℝ),
   { exact λ n, (real.Inf_lt _ hS hS').1 ((lt_add_iff_pos_right _).2 nat.one_div_pos_of_nat) }, 
   choose f hf using this,
-  refine ⟨f,λ n, (hf n).1, _⟩,
+  refine ⟨f, λ n, (hf n).1, _⟩,
   rw tendsto_iff_dist_tendsto_zero,
   refine squeeze_zero_norm _ tendsto_one_div_add_at_top_nhds_0_nat, 
   intro n,
@@ -71,6 +71,26 @@ begin
   rw [real.dist_eq, real.norm_eq_abs, abs_abs, 
       abs_of_nonneg (sub_nonneg.2 (real.Inf_le S hS' hf₁))], 
   linarith,
+end
+
+lemma exists_tendsto_Sup {S : set ℝ} (hS : ∃ x, x ∈ S) (hS' : ∃ x, ∀ y ∈ S, y ≤ x) : 
+  ∃ (f : ℕ → ℝ) (hf : ∀ n, f n ∈ S), tendsto f at_top (nhds (Sup S)) :=
+begin
+  have : ∀ n : ℕ, ∃ t ∈ S, Sup S - 1 / (n + 1 : ℝ) < t,
+  { intro n,
+    apply (real.lt_Sup _ hS hS').1,
+    rw [sub_lt, _root_.sub_self],
+    exact nat.one_div_pos_of_nat },
+  choose f hf using this,
+  refine ⟨f, λ n, (hf n).1, _⟩,
+  rw tendsto_iff_dist_tendsto_zero,
+  refine squeeze_zero_norm _ tendsto_one_div_add_at_top_nhds_0_nat, 
+  intro n,
+  obtain ⟨hf₁, hf₂⟩ := hf n,
+  rw [real.dist_eq, real.norm_eq_abs, abs_abs, abs_of_nonpos], 
+  { linarith },
+  { rw [sub_le, _root_.sub_zero], 
+    exact real.le_Sup S hS' hf₁ },
 end
 
 lemma tendsto_le_of_forall_le {f g : ℕ → ℝ} {a b : ℝ} (hfg : ∀ n, f n ≤ g n)
