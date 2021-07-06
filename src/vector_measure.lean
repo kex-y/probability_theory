@@ -2,9 +2,32 @@ import measure_theory.integration
 import data.real.ereal
 import lemmas
 
-/-
-This is a stand alone file attempting to generalize signed measures to be vector 
-valued.
+/-! 
+
+# Vector valued measures
+
+This file defines vector valued measures, which are σ-additive functions from a set to a module `M`
+over the ring `R` such that it maps the empty set and non-measurable sets to zero. In the case 
+that `R = M = ℝ`, we called the vector measure a signed measure and write `signed_measure α`. 
+Similarly, when `R = M = ℂ`, we call the measure a complex measure and write `complex_measure α`.
+
+## Main definitions 
+
+* `vector_measure` is a vector valued, σ-additive function that maps the empty 
+  and non-measurable set to zero.
+
+## Implementation notes
+
+We require all non-measurable set to be mapped to zero in order for the extensionality lemma 
+to only compare the underlying functions for measurable sets.
+
+We use `has_sum` instead of `tsum` in the definition of vector measures in comparison to `measure` 
+since this provides summablity. In the case of `signed_measure`, this is not necessary and one 
+can construct a signed measure without proving summable using `signed_measure'.to_signed_measure`.
+
+## Tags
+
+vector measure, signed measure, complex measure
 -/
 
 noncomputable theory
@@ -26,6 +49,8 @@ structure vector_measure (α : Type*) [measurable_space α] (R : Type*) [ring R]
 
 -- A `signed_measure` is a `vector_measure` over `ℝ` over itself.
 notation `signed_measure ` α := vector_measure α ℝ ℝ
+-- A `complex_measure` is a `vector_measure` over `ℂ` over itself.
+notation `complex_measure ` α := vector_measure α ℂ ℂ
 
 open set measure_theory
 
@@ -440,13 +465,21 @@ begin
     { exact measure_of_nonpos_seq_nonpos } },
 end
 
+/-- Obtain a `signed_measure` by constructing a `signed_measure'`. -/
 def to_signed_measure (s : signed_measure' α) : signed_measure α := 
 { measure_of := s,
   empty := s.empty,
   not_measurable := s.not_measurable,
-  m_Union := λ f hf₁ hf₂, 
+  m_Union := λ _ hf₁ hf₂, 
     (summable.has_sum_iff (signed_measure'.summable_measure_of hf₁ hf₂)).2 
       (s.measure_of_disjoint_Union hf₁ hf₂).symm }
+
+/-- The naturally induces `signed_measure'` from a `signed_measure`. -/
+def of_signed_measure (s : signed_measure α) : signed_measure' α :=
+{ measure_of := s,
+  empty := s.empty,
+  not_measurable := s.not_measurable,
+  m_Union := λ _ hf₁ hf₂, s.measure_of_disjoint_Union hf₁ hf₂ }
 
 end signed_measure'
 
@@ -481,7 +514,7 @@ if_neg hi
 
 variables {R M : Type*} 
 variables [ring R] [add_comm_group M] [module R M] 
-variables [topological_space M] [topological_add_group M]
+variables [topological_space M] 
 
 /-- The zero signed measure. -/
 def zero : vector_measure α R M := 
@@ -489,9 +522,14 @@ def zero : vector_measure α R M :=
 
 instance : has_zero (vector_measure α R M) := ⟨zero⟩
 instance : inhabited (vector_measure α R M) := ⟨0⟩
+instance : inhabited (signed_measure' α) := ⟨signed_measure'.of_signed_measure 0⟩
 
 @[simp]
 lemma zero_apply (i : set α) : (0 : vector_measure α R M) i = 0 := rfl
+
+section 
+
+variables [topological_add_group M]
 
 /-- The negative of a vector measure is a vector measure. -/
 def neg (v : vector_measure α R M) : vector_measure α R M := 
@@ -531,6 +569,8 @@ instance : add_comm_group (vector_measure α R M) :=
   add_comm := by { intros, ext i; simp [add_comm] },
   add_left_neg := by { intros, ext i, simp } } .
 
+end
+
 /-- Given two finite measures `μ, ν`, `of_sub_measure μ ν` is the signed measure 
 corresponding to the function `μ - ν`. -/
 def of_sub_measure (μ ν : measure α) [hμ : finite_measure μ] [hν : finite_measure ν] : 
@@ -565,7 +605,7 @@ instance : has_scalar R (vector_measure α R M) := ⟨smul⟩
 lemma smul_apply {v : vector_measure α R M} {r : R} (i : set α) : 
   (r • v) i = r • v i := rfl
 
-instance : module R (vector_measure α R M) := 
+instance [topological_add_group M] : module R (vector_measure α R M) := 
 { one_smul := by { intros, ext i; simp [one_smul] },
   mul_smul := by { intros, ext i; simp [mul_smul] },
   smul_add := by { intros, ext i; simp [smul_add] },
