@@ -93,19 +93,19 @@ begin
     exact real.le_Sup S hS' hf₁ },
 end
 
-lemma tendsto_le_of_forall_le {f g : ℕ → ℝ} {a b : ℝ} (hfg : ∀ n, f n ≤ g n)
-  (hf : tendsto f at_top (nhds a)) (hg : tendsto g at_top (nhds b)) :
-  a ≤ b :=
+lemma ennreal.exists_tendsto_Sup {S : set ℝ≥0∞} (hS : ∃ x, x ∈ S) : 
+  ∃ (f : ℕ → ℝ≥0∞) (hf : ∀ n, f n ∈ S), tendsto f at_top (nhds (Sup S)) :=
 begin
-  apply le_of_tendsto_of_tendsto hf hg,
-  rw [eventually_le, eventually_iff_exists_mem],
-  exact ⟨set.Ioi 0, Ioi_mem_at_top _, λ n _, hfg n⟩,
+  by_cases ∃ x < ⊤, ∀ y ∈ S, y ≤ x,
+  { sorry },
+  { push_neg at h,
+    replace h : ∀ n : ℕ, (∃ (y : ℝ≥0∞), y ∈ S ∧ (n : ℝ≥0∞) < y),
+    { intro n, refine h n _, sorry,
+
+    },
+    sorry
+  }
 end
-
-lemma le_of_le_tendsto {f : ℕ → ℝ} {a b : ℝ}
-  (hf₁ : tendsto f at_top (nhds b)) (hf₂ : ∀ n, a ≤ f n) : a ≤ b :=
-tendsto_le_of_forall_le hf₂ tendsto_const_nhds hf₁
-
 
 end filter
 
@@ -189,6 +189,12 @@ begin
   { exact hxm₂ _ h hxn₁.2 },
   { exact hxn₂ _ h hxm₁.2 }
 end
+
+lemma set.disjoint_compl (b : set α) : disjoint b bᶜ :=
+is_compl.disjoint is_compl_compl
+
+lemma set.disjoint_inter_compl (a b : set α) : disjoint (a ∩ b) (a ∩ bᶜ) :=
+disjoint.mono (inter_subset_right _ _) (inter_subset_right _ _) b.disjoint_compl
 
 end set
 

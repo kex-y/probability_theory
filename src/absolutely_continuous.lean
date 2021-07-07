@@ -2,7 +2,7 @@ import measure_theory.integration
 import data.real.ereal
 
 /-
-This file contain the definition of absolutely continuous for measures.
+This file contain the definition of absolutely continuous for measures.  
 -/
 
 noncomputable theory
@@ -13,13 +13,14 @@ variables [measurable_space α] [measurable_space β]
 
 namespace measure_theory
 
+-- ↓ These are already in mathlib
 def absolutely_continuous (ν μ : measure α) : Prop := 
   ∀ (A : set α) (hA₁ : measurable_set A) (hA₂ : μ A = 0), ν A = 0 
 
 variables {μ : measure α}
 
-local infix ` << `:60 := absolutely_continuous
-local infix ` . `:max := measure.with_density
+infix ` << `:60 := absolutely_continuous
+infix ` . `:max := measure.with_density
 
 lemma lintegral_in_eq_zero {f : α → ℝ≥0∞} (hf : measurable f) 
   {A : set α} (hA : μ A = 0) : ∫⁻ a in A, f a ∂μ = 0 :=
