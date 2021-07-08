@@ -546,7 +546,7 @@ begin
   have hA₂ : s.negative A := negative_Union_negative hB₁ hB₂,
   have hA₃ : s A = Inf s.measure_of_negatives,
   { apply has_le.le.antisymm,
-    { apply le_of_le_tendsto hf₂,
+    { refine le_of_tendsto_of_tendsto tendsto_const_nhds hf₂ (eventually_of_forall _),
       intro n,
       rw [← (hB n).2, hA, ← set.diff_union_of_subset (set.subset_Union _ n), 
       measure_of_union (disjoint.comm.1 set.disjoint_diff) _ (hB₁ n)],

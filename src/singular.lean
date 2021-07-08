@@ -102,13 +102,6 @@ begin
   exact ⟨1 / (n + 1), by simp, f n, hf₁ n, hn, hf₂ n⟩,
 end
 
-@[simp] -- Surprised this is not in mathlib
-lemma lintegral_univ_eq (f : α → ℝ≥0∞) : 
-  ∫⁻ a in set.univ, f a ∂μ = ∫⁻ a, f a ∂μ :=
-begin
-  congr, rw measure.restrict_univ,
-end
-
 /-- Given two measures `μ` and `ν`, `measurable_le μ ν` is the set of measurable 
 functions `f`, such that, for all measurable sets `A`, `∫⁻ x in A, f x ∂μ ≤ ν A`. 
 
@@ -180,13 +173,29 @@ begin
     exact (not_le.2 hx₂) hx₁ }
 end
 
-lemma supr_succ_eq_sup (f : ℕ → α → ℝ≥0∞) (m : ℕ) (a : α) :
+lemma supr_succ_eq_sup {α} (f : ℕ → α → ℝ≥0∞) (m : ℕ) (a : α) :
   (⨆ (k : ℕ) (hk : k ≤ m + 1), f k a) = f m.succ a ⊔ ⨆ (k : ℕ) (hk : k ≤ m), f k a :=
 begin
   ext x,
   simp only [option.mem_def, ennreal.some_eq_coe],
   split; intro h; rw ← h, symmetry,
-  all_goals { sorry }
+  all_goals { 
+    set c := (⨆ (k : ℕ) (hk : k ≤ m + 1), f k a) with hc, -- What is going on?
+    set d := (f m.succ a ⊔ ⨆ (k : ℕ) (hk : k ≤ m), f k a) with hd,
+    suffices : c ≤ d ∧ d ≤ c,
+    { change c = d, -- commenting this breaks?
+      exact le_antisymm this.1 this.2 },
+    rw [hc, hd],
+    refine ⟨_, _⟩,
+    { refine bsupr_le (λ n hn, _),
+      rcases nat.of_le_succ hn with (h | h),
+      { exact le_sup_of_le_right (le_bsupr n h) },
+      { exact h ▸ le_sup_left } },
+    { refine sup_le _ _,
+      { convert @le_bsupr _ _ _ (λ i, i ≤ m + 1) _ m.succ (le_refl _), refl },
+      { refine bsupr_le (λ n hn, _),
+        have := (le_trans hn (nat.le_succ m)), -- repacing this breaks?
+        exact (le_bsupr n this) } } },
 end
 
 lemma supr_mem_measurable_le 
@@ -215,20 +224,20 @@ end
 lemma supr_monotone (f : ℕ → α → ℝ≥0∞) : 
   monotone (λ n x, ⨆ k (hk : k ≤ n), f k x) :=
 begin
-  sorry,
+  intros n m hnm x,
+  simp only,
+  refine bsupr_le (λ k hk, _),
+  have : k ≤ m, exact le_trans hk hnm, -- same problem here
+  exact le_bsupr k this,
 end
 
 lemma supr_monotone' (f : ℕ → α → ℝ≥0∞) (x : α) : 
   monotone (λ n, ⨆ k (hk : k ≤ n), f k x) :=
-begin
-  sorry
-end
+λ n m hnm, supr_monotone f hnm x
 
 lemma supr_le_le (f : ℕ → α → ℝ≥0∞) (n k : ℕ) (hk : k ≤ n) : 
   f k ≤ λ x, ⨆ k (hk : k ≤ n), f k x :=
-begin
-  sorry
-end
+λ x, le_bsupr k hk
 
 def M (μ ν : measure α) := (λ f : α → ℝ≥0∞, ∫⁻ x, f x ∂μ) '' measurable_le μ ν
     
@@ -251,17 +260,13 @@ open filter
 
 lemma tendsto_supr_le (f : ℕ → α → ℝ≥0∞) (x : α) :
   tendsto (λ n, ⨆ k (hk : k ≤ n), f k x) at_top (nhds  ⨆ n k (hk : k ≤ n), f k x) :=
-begin
-  sorry
-end
+tendsto_at_top_supr (supr_monotone' f x)
 
 end
 
 lemma finite_measure_of_finite_lintegral 
   {f : α → ℝ≥0∞} (hf : ∫⁻ a, f a ∂μ < ∞) : finite_measure (μ . f) := 
-begin
-  sorry
-end
+{ measure_univ_lt_top := by rwa [with_density_apply _ measurable_set.univ, lintegral_univ_eq] }
 
 lemma measure.sub_le (h : ν ≤ μ) : μ - ν ≤ μ :=
 begin
@@ -305,11 +310,36 @@ begin
     refine lt_add_of_pos_right a (ennreal.coe_pos.mp hb) }
 end
 
+lemma measurable_set.cond {A B : set α} (hA : measurable_set A) (hB : measurable_set B) 
+  {i : bool} : measurable_set (cond i A B) :=
+begin
+  cases i,
+  exacts [hB, hA],
+end
+
 lemma lintegral_union {f : α → ℝ≥0∞} {A B : set α} 
   (hA : measurable_set A) (hB : measurable_set B) (hAB : disjoint A B) :
   ∫⁻ a in A ∪ B, f a ∂μ = ∫⁻ a in A, f a ∂μ + ∫⁻ a in B, f a ∂μ :=
 begin
-  rw [set.union_eq_Union, lintegral_Union]; sorry
+  rw [set.union_eq_Union, lintegral_Union, tsum_cond, add_comm], 
+  { simp only [to_bool_false_eq_ff, to_bool_true_eq_tt, cond] },
+  { intros i, exact measurable_set.cond hA hB },
+  { intros i j hij,
+    cases i; cases j,
+    { simp only [eq_self_iff_true, not_true, ne.def] at hij,
+      exact false.elim hij },
+    { intros x, 
+      simp only [and_imp, set.mem_empty_eq, set.mem_inter_eq, set.bot_eq_empty,   
+                 cond, set.inf_eq_inter],
+      intros hB hA,
+      exact hAB ⟨hA, hB⟩ },
+    { intros x, 
+      simp only [and_imp, set.mem_empty_eq, set.mem_inter_eq, set.bot_eq_empty,   
+                 cond, set.inf_eq_inter],
+      intros hA hB,
+      exact hAB ⟨hA, hB⟩ },
+    { simp only [eq_self_iff_true, not_true, ne.def] at hij,
+      exact false.elim hij } }
 end 
 
 /-- The Lebesgue decomposition theorem: Given finite measures `μ` and `ν`, there exists 
@@ -317,7 +347,7 @@ measures `ν₁`, `ν₂` such that `ν₁` is mutually singular to `μ` and the
 `f : α → ℝ≥0∞` such that `ν₂ = μ.with_density f`. -/
 theorem exists_singular_with_density (μ ν : measure α) [finite_measure μ] [finite_measure ν] : 
   ∃ (ν₁ ν₂ : measure α) (hν : ν = ν₁ + ν₂), 
-  ν₁ ⊥ μ ∧ ∃ f : α → ℝ≥0∞, ν₂ = μ . f := 
+  ν₁ ⊥ μ ∧ ∃ (f : α → ℝ≥0∞) (hf : measurable f), ν₂ = μ . f := 
 begin
   have h := @ennreal.exists_tendsto_Sup (M μ ν) _,
   { choose g hg₁ hg₂ using h,
@@ -342,6 +372,9 @@ begin
         simp [supr_monotone' f _] },
       { refine filter.eventually_of_forall (λ a, _),
         simp [tendsto_supr_le _ _] } },
+    have hζm : measurable ζ,
+      { convert measurable_supr (λ n, (supr_mem_measurable_le _ hf₁ n).1),
+        ext, simp [hζ] },
 
     set ν₁ := ν - μ . ζ with hν₁,
 
@@ -357,7 +390,7 @@ begin
         rw [with_density_apply _ measurable_set.univ, lintegral_univ_eq] at hle',
         exact lt_of_le_of_lt hle' (measure_lt_top _ _) },
 
-    refine ⟨ν₁, μ . ζ, _, _, ζ, rfl⟩,
+    refine ⟨ν₁, μ . ζ, _, _, ζ, hζm, rfl⟩,
     { rw hν₁, ext1 A hA, 
       rw [measure.coe_add, pi.add_apply, measure.sub_apply hA hle, 
           add_comm, ennreal.add_sub_cancel_of_le (hle A hA)] },
@@ -379,10 +412,6 @@ begin
 
       obtain ⟨ε, hε₁, E, hE₁, hE₂, hE₃⟩ := exists_positive_of_sub_measure ν₁ μ h, 
       simp_rw hν₁ at hE₃,
-
-      have hζm : measurable ζ,
-      { convert measurable_supr (λ n, (supr_mem_measurable_le _ hf₁ n).1),
-        ext, simp [hζ] },
 
       have hζle : ∀ A, measurable_set A → ∫⁻ a in A, ζ a ∂μ ≤ ν A,
       { intros A hA, rw hζ,
@@ -442,6 +471,31 @@ begin
       rw [← lintegral_univ_eq, ← with_density_apply _ measurable_set.univ],
       exact ne_of_lt (measure_lt_top _ _) } },
   { exact ⟨0, 0, zero_mem_measurable_le, by simp⟩ },
-end
+end 
+
+/-- The Radon-Nikodym theorem: Given two finite measures `μ` and `ν`, if `ν` is absolutely 
+continuous with respect to `μ`, then there exists a measurable function `f` such that 
+`f` is the derivative of `ν` with respect to `μ`. -/
+theorem exists_with_density_of_absolute_continuous 
+  (μ ν : measure α) [finite_measure μ] [finite_measure ν] (h : ν ≪ μ) : 
+  ∃ (f : α → ℝ≥0∞) (hf : measurable f), ν = μ . f :=
+begin
+  obtain ⟨ν₁, ν₂, hν, ⟨E, hE₁, hE₂, hE₃⟩, f, hf₁, hf₂⟩ := 
+    exists_singular_with_density μ ν,
+  have : ν₁ = 0,
+  { apply le_antisymm,
+    { intros A hA,
+      suffices : ν₁ set.univ = 0,
+      { rw [measure.coe_zero, pi.zero_apply, ← this],
+        exact measure_mono (set.subset_univ _) },
+      rw [← set.union_compl_self E, measure_union (set.disjoint_compl E) hE₁ 
+            (measurable_set.compl hE₁), hE₂, zero_add],
+      have : (ν₁ + ν₂) Eᶜ = ν Eᶜ, { rw hν },
+      rw [measure.coe_add, pi.add_apply, h hE₃] at this,
+      exact (add_eq_zero_iff.1 this).1 },
+    { exact measure.zero_le _} },
+  rw [this, zero_add] at hν, 
+  exact ⟨f, hf₁, hν.symm ▸ hf₂⟩,
+end 
 
 end signed_measure

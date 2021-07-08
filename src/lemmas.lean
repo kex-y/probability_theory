@@ -25,7 +25,7 @@ lemma nnreal.summable_coe_of_summable {f : ℕ → ℝ}
   (hf₁ : ∀ n, 0 ≤ f n) (hf₂ : summable f) : 
   @summable (ℝ≥0) _ _ _ (λ n, ⟨f n, hf₁ n⟩) :=
 begin
-  lift f to ℕ → ℝ≥0, -- using hf₁ doesn't work here
+  lift f to ℕ → ℝ≥0, 
   { exact nnreal.summable_coe.mp hf₂ },
   { exact hf₁ }
 end
@@ -36,6 +36,13 @@ begin
   lift f to ℕ → ℝ≥0,
   { simp_rw [← nnreal.coe_tsum, subtype.coe_eta] },
   { exact hf₁ }
+end
+
+lemma tsum_cond [add_comm_monoid α] [topological_space α] [t2_space α] 
+  (f : bool → α) : ∑' i : bool, f i = f false + f true :=
+begin
+  rw [tsum_fintype, finset.sum_eq_add];
+  simp,
 end
 
 end tsum
@@ -93,18 +100,100 @@ begin
     exact real.le_Sup S hS' hf₁ },
 end
 
+lemma Sup_to_real_eq_Sup_image_to_real {S : set ℝ≥0∞} {x r : ℝ≥0∞}
+  (hr₁ : r < ⊤) (hr₂ : ∀ (y : ℝ≥0∞), y ∈ S → y ≤ r)
+  (hx : x ∈ S) (hmem : x.to_real ∈ ennreal.to_real '' S) :
+  Sup (ennreal.to_real '' S) = (Sup S).to_real :=
+begin
+  have hbdd : ∀ (y : ℝ≥0∞), y ∈ S → y < ⊤ := λ y hy, lt_of_le_of_lt (hr₂ y hy) hr₁,
+
+  have : ∀ (y : ℝ), y ∈ ennreal.to_real '' S → y ≤ r.to_real,
+  { rintro _ ⟨y, hy, rfl⟩,
+    exact (to_real_le_to_real (ne_of_lt (hbdd y hy)) (ne_of_lt hr₁)).2 (hr₂ y hy) },
+
+  have hnonneg : 0 ≤ Sup (ennreal.to_real '' S), 
+  { exact le_trans (@to_real_nonneg x) (real.le_Sup _ ⟨r.to_real, this⟩ hmem) },
+
+  have hSlt : Sup S < ⊤ := (lt_of_le_of_lt (Sup_le (λ b hb, hr₂ b hb)) hr₁),
+  apply le_antisymm,
+  { rw real.Sup_le _ ⟨x.to_real, hmem⟩ ⟨r.to_real, this⟩,
+    { rintro _ ⟨y, hy, rfl⟩,
+      rw to_real_le_to_real (ne_of_lt (hbdd y hy)) (ne_of_lt hSlt),
+      exact le_Sup hy } },
+  { rwa [← of_real_le_of_real_iff hnonneg, of_real_to_real _],
+    { refine Sup_le (λ b hb, _),
+      rw le_of_real_iff_to_real_le (ne_of_lt (hbdd _ hb)) hnonneg,
+      refine real.le_Sup _ ⟨r.to_real, this⟩ ⟨b, hb, rfl⟩ },
+    exact ne_of_lt hSlt },
+end
+
+private lemma ennreal.exists_tendsto_Sup_bdd {S : set ℝ≥0∞} 
+  (hS : ∃ x, x ∈ S) (h : ∃ x < ⊤, ∀ y ∈ S, y ≤ x) : 
+  ∃ (f : ℕ → ℝ≥0∞) (hf : ∀ n, f n ∈ S), tendsto f at_top (nhds (Sup S)) :=
+begin
+  obtain ⟨r, hr₁, hr₂⟩ := h,
+  obtain ⟨x, hx⟩ := hS,
+  have hmem : x.to_real ∈ ennreal.to_real '' S := ⟨x, hx, rfl⟩,
+  have hbdd : ∀ y ∈ S, y < ⊤ := λ _ hy, lt_of_le_of_lt (hr₂ _ hy) hr₁,
+  obtain ⟨f, hf₁, hf₂⟩ := exists_tendsto_Sup ⟨x.to_real, hmem⟩ _,
+  { have  hnonneg : ∀ n, 0 ≤ f n,
+    { intro n,
+      obtain ⟨_, -, hy⟩ := hf₁ n,
+      exact hy ▸ to_real_nonneg },
+    refine ⟨λ x, some (⟨f x, hnonneg x⟩ : ℝ≥0), λ n, _, _⟩,
+    { obtain ⟨s, hs₁, hs₂⟩ := hf₁ n,
+      lift s to ℝ≥0 using ne_of_lt (hbdd _ hs₁),
+      simp only [← hs₂, some_eq_coe, subtype.coe_eta, coe_to_real, hs₁] },
+    { lift f to ℕ → ℝ≥0,
+      { have hS₁ : Sup S = some ⟨(Sup S).to_real, to_real_nonneg⟩, 
+        { lift Sup S to ℝ≥0 using ne_of_lt (lt_of_le_of_lt (Sup_le (λ b hb, hr₂ b hb)) hr₁),
+          simp only [some_eq_coe, subtype.coe_eta, coe_to_real] },
+        have hS₂ : 0 ≤ Sup (ennreal.to_real '' S), 
+        { refine le_trans (@to_real_nonneg x) (real.le_Sup _ ⟨r.to_real, _⟩ hmem),
+          rintro _ ⟨y, hy, rfl⟩,
+          exact (to_real_le_to_real (ne_of_lt (hbdd y hy)) (ne_of_lt hr₁)).2 (hr₂ y hy) },
+        rw hS₁, simp only [some_eq_coe, subtype.coe_eta],
+        rw ennreal.tendsto_coe,
+        rw [← nnreal.coe_mk _ hS₂, nnreal.tendsto_coe] at hf₂,
+        convert hf₂,
+        exact (Sup_to_real_eq_Sup_image_to_real hr₁ hr₂ hx hmem).symm },
+      { exact hnonneg } } },
+  { refine ⟨r.to_real, _⟩,
+    rintro _ ⟨y, hy₁, rfl⟩,
+    rw to_real_le_to_real,
+    { exact hr₂ _ hy₁ },
+    { exact ne_of_lt (hbdd y hy₁) },
+    { exact ne_of_lt hr₁ } }
+end
+
+private lemma ennreal.exists_tendsto_Sup_not_bdd {S : set ℝ≥0∞} 
+  (hS : ∃ x, x ∈ S) (h : ¬ ∃ x < ⊤, ∀ y ∈ S, y ≤ x) : 
+  ∃ (f : ℕ → ℝ≥0∞) (hf : ∀ n, f n ∈ S), tendsto f at_top (nhds (Sup S)) :=
+begin
+  push_neg at h,
+  replace h : ∀ n : ℕ, (∃ (y : ℝ≥0∞), y ∈ S ∧ (n : ℝ≥0∞) < y),
+  { intro n, refine h n _, 
+    rw ← coe_nat,
+    exact coe_lt_top },
+  choose f hf₁ hf₂ using h,
+  have : Sup S = ⊤,
+  { rw Sup_eq_top,
+    intros r hr,
+    lift r to ℝ≥0 using ne_of_lt hr,
+    obtain ⟨n, hn⟩ := exists_nat_gt r,
+    rw [← coe_lt_coe, coe_nat] at hn,
+    exact ⟨f n, hf₁ n, lt_trans hn (hf₂ n)⟩ },
+  rw this,
+  exact ⟨f, hf₁, tendsto_nhds_top (λ n, eventually_iff_exists_mem.2 
+    ⟨Ioi n, Ioi_mem_at_top _, λ m hm, lt_trans (by simp [mem_Ioi.1 hm]) (hf₂ m)⟩)⟩
+end
+
 lemma ennreal.exists_tendsto_Sup {S : set ℝ≥0∞} (hS : ∃ x, x ∈ S) : 
   ∃ (f : ℕ → ℝ≥0∞) (hf : ∀ n, f n ∈ S), tendsto f at_top (nhds (Sup S)) :=
 begin
   by_cases ∃ x < ⊤, ∀ y ∈ S, y ≤ x,
-  { sorry },
-  { push_neg at h,
-    replace h : ∀ n : ℕ, (∃ (y : ℝ≥0∞), y ∈ S ∧ (n : ℝ≥0∞) < y),
-    { intro n, refine h n _, sorry,
-
-    },
-    sorry
-  }
+  { exact ennreal.exists_tendsto_Sup_bdd hS h },
+  { exact ennreal.exists_tendsto_Sup_not_bdd hS h }
 end
 
 end filter
@@ -257,3 +346,18 @@ begin
 end
 
 end ennreal
+
+section lintegral
+
+open measure_theory
+
+variables [measurable_space α] {μ : measure α}
+
+@[simp] -- Surprised this is not in mathlib
+lemma lintegral_univ_eq (f : α → ℝ≥0∞) : 
+  ∫⁻ a in set.univ, f a ∂μ = ∫⁻ a, f a ∂μ :=
+begin
+  congr, rw measure.restrict_univ,
+end
+
+end lintegral
