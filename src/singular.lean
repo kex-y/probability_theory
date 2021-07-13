@@ -268,17 +268,14 @@ lemma finite_measure_of_finite_lintegral
   {f : α → ℝ≥0∞} (hf : ∫⁻ a, f a ∂μ < ∞) : finite_measure (μ . f) := 
 { measure_univ_lt_top := by rwa [with_density_apply _ measurable_set.univ, lintegral_univ_eq] }
 
-lemma measure.sub_le (h : ν ≤ μ) : μ - ν ≤ μ :=
-begin
-  intros A hA,
-  rw measure.sub_apply hA h,
-  exact ennreal.sub_le_self _ _ 
-end
+-- PRed
+lemma measure.sub_le : μ - ν ≤ μ :=
+Inf_le (measure.le_add_right (le_refl _))
 
-lemma finite_measure_sub (h : ν ≤ μ) : 
-  finite_measure (μ - ν) := 
+-- PRed
+instance finite_measure_sub : finite_measure (μ - ν) := 
 { measure_univ_lt_top := lt_of_le_of_lt 
-    (measure.sub_le h set.univ measurable_set.univ) (measure_lt_top _ _) }
+    (measure.sub_le set.univ measurable_set.univ) (measure_lt_top _ _) }
 
 lemma ennreal.to_real_sub_of_le {a b : ℝ≥0∞} (h : b ≤ a) (ha : a ≠ ∞): 
   (a - b).to_real = a.to_real - b.to_real :=
@@ -293,12 +290,6 @@ begin
   exact congr_fun (congr_arg has_add.add h) a,
 end
 
-theorem lintegral_supr_in
-  {f : ℕ → α → ℝ≥0∞} (hf : ∀n, measurable (f n)) (h_mono : monotone f) 
-  {A : set α} (hA : measurable_set A) :
-  (∫⁻ a in A, ⨆ n, f n a ∂μ) = (⨆ n, ∫⁻ a in A, f n a ∂μ) :=
-lintegral_supr hf h_mono
-
 lemma ennreal.lt_add_of_pos_right {a b : ℝ≥0∞} (hb : 0 < b) (ha : a ≠ ⊤): a < a + b :=
 begin
   lift a to ℝ≥0 using ha,
@@ -310,6 +301,7 @@ begin
     refine lt_add_of_pos_right a (ennreal.coe_pos.mp hb) }
 end
 
+-- PRed
 lemma measurable_set.cond {A B : set α} (hA : measurable_set A) (hB : measurable_set B) 
   {i : bool} : measurable_set (cond i A B) :=
 begin
@@ -317,6 +309,7 @@ begin
   exacts [hB, hA],
 end
 
+-- PRed
 lemma lintegral_union {f : α → ℝ≥0∞} {A B : set α} 
   (hA : measurable_set A) (hB : measurable_set B) (hAB : disjoint A B) :
   ∫⁻ a in A ∪ B, f a ∂μ = ∫⁻ a in A, f a ∂μ + ∫⁻ a in B, f a ∂μ :=
@@ -324,22 +317,7 @@ begin
   rw [set.union_eq_Union, lintegral_Union, tsum_cond, add_comm], 
   { simp only [to_bool_false_eq_ff, to_bool_true_eq_tt, cond] },
   { intros i, exact measurable_set.cond hA hB },
-  { intros i j hij,
-    cases i; cases j,
-    { simp only [eq_self_iff_true, not_true, ne.def] at hij,
-      exact false.elim hij },
-    { intros x, 
-      simp only [and_imp, set.mem_empty_eq, set.mem_inter_eq, set.bot_eq_empty,   
-                 cond, set.inf_eq_inter],
-      intros hB hA,
-      exact hAB ⟨hA, hB⟩ },
-    { intros x, 
-      simp only [and_imp, set.mem_empty_eq, set.mem_inter_eq, set.bot_eq_empty,   
-                 cond, set.inf_eq_inter],
-      intros hA hB,
-      exact hAB ⟨hA, hB⟩ },
-    { simp only [eq_self_iff_true, not_true, ne.def] at hij,
-      exact false.elim hij } }
+  { rwa pairwise_disjoint_on_bool }
 end 
 
 /-- The Lebesgue decomposition theorem: Given finite measures `μ` and `ν`, there exists 
@@ -407,8 +385,6 @@ begin
         have hle' := hle set.univ measurable_set.univ, 
         rw [with_density_apply _ measurable_set.univ, lintegral_univ_eq] at hle',
         exact lt_of_le_of_lt hle' (measure_lt_top _ _) },
-
-      haveI : finite_measure ν₁ := finite_measure_sub hle,
 
       obtain ⟨ε, hε₁, E, hE₁, hE₂, hE₃⟩ := exists_positive_of_sub_measure ν₁ μ h, 
       simp_rw hν₁ at hE₃,

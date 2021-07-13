@@ -220,19 +220,19 @@ end nat
 
 section set
 
-lemma set.Union_eq_union {ι} (f : ι → set α) (j : ι) : 
-  (⋃ i, f i) = f j ∪ ⋃ (i : ι) (hi : i ≠ j), f i :=
+lemma set.union_Union_neq_eq_Union {ι} (f : ι → set α) (j : ι) : 
+  (f j ∪ ⋃ (i : ι) (hi : i ≠ j), f i) = ⋃ i, f i :=
 begin
-  ext x, 
+  ext x,
   simp only [exists_prop, mem_Union, mem_union_eq], 
   split,
+  { rintro (hj | ⟨i, hij, hi⟩),
+    { exact ⟨j, hj⟩ },
+    { exact ⟨i, hi⟩ } },
   { rintro ⟨i, hi⟩,
     by_cases i = j,
     { exact or.inl (h ▸ hi) },
-    { exact or.inr ⟨i, h, hi⟩ } },
-  { rintro (hj | ⟨i, hij, hi⟩),
-    { exact ⟨j, hj⟩ },
-    { exact ⟨i, hi⟩ } }
+    { exact or.inr ⟨i, h, hi⟩ } }
 end
 
 lemma set.union_inter_diff_eq {a b c : set α} (habc : a ⊆ b ∪ c) : 
