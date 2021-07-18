@@ -268,15 +268,6 @@ lemma finite_measure_of_finite_lintegral
   {f : α → ℝ≥0∞} (hf : ∫⁻ a, f a ∂μ < ∞) : finite_measure (μ . f) := 
 { measure_univ_lt_top := by rwa [with_density_apply _ measurable_set.univ, lintegral_univ_eq] }
 
--- PRed
-lemma measure.sub_le : μ - ν ≤ μ :=
-Inf_le (measure.le_add_right (le_refl _))
-
--- PRed
-instance finite_measure_sub : finite_measure (μ - ν) := 
-{ measure_univ_lt_top := lt_of_le_of_lt 
-    (measure.sub_le set.univ measurable_set.univ) (measure_lt_top _ _) }
-
 lemma ennreal.to_real_sub_of_le {a b : ℝ≥0∞} (h : b ≤ a) (ha : a ≠ ∞): 
   (a - b).to_real = a.to_real - b.to_real :=
 begin
@@ -300,25 +291,6 @@ begin
     rw [← ennreal.coe_add, ennreal.coe_lt_coe],
     refine lt_add_of_pos_right a (ennreal.coe_pos.mp hb) }
 end
-
--- PRed
-lemma measurable_set.cond {A B : set α} (hA : measurable_set A) (hB : measurable_set B) 
-  {i : bool} : measurable_set (cond i A B) :=
-begin
-  cases i,
-  exacts [hB, hA],
-end
-
--- PRed
-lemma lintegral_union {f : α → ℝ≥0∞} {A B : set α} 
-  (hA : measurable_set A) (hB : measurable_set B) (hAB : disjoint A B) :
-  ∫⁻ a in A ∪ B, f a ∂μ = ∫⁻ a in A, f a ∂μ + ∫⁻ a in B, f a ∂μ :=
-begin
-  rw [set.union_eq_Union, lintegral_Union, tsum_cond, add_comm], 
-  { simp only [to_bool_false_eq_ff, to_bool_true_eq_tt, cond] },
-  { intros i, exact measurable_set.cond hA hB },
-  { rwa pairwise_disjoint_on_bool }
-end 
 
 /-- The Lebesgue decomposition theorem: Given finite measures `μ` and `ν`, there exists 
 measures `ν₁`, `ν₂` such that `ν₁` is mutually singular to `μ` and there exists some 
@@ -429,8 +401,7 @@ begin
           rw [lintegral_add hζm (measurable.indicator measurable_const hE₁), add_comm],
           refine congr_fun (congr_arg has_add.add _) _,
           rw [set_lintegral_const, lintegral_indicator _ hE₁, set_lintegral_const, 
-              measure.restrict_apply hE₁, set.inter_comm],
-          apply_instance },
+              measure.restrict_apply hE₁, set.inter_comm] },
         conv_rhs { rw ← set.inter_union_compl A E },
         rw [this, measure_union (set.disjoint_inter_compl _ _) (measurable_set.inter hA hE₁) 
           (measurable_set.inter hA (measurable_set.compl hE₁))],
@@ -447,7 +418,7 @@ begin
       rw [← lintegral_univ_eq, ← with_density_apply _ measurable_set.univ],
       exact ne_of_lt (measure_lt_top _ _) } },
   { exact ⟨0, 0, zero_mem_measurable_le, by simp⟩ },
-end 
+end
 
 /-- The Radon-Nikodym theorem: Given two finite measures `μ` and `ν`, if `ν` is absolutely 
 continuous with respect to `μ`, then there exists a measurable function `f` such that 

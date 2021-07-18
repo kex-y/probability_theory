@@ -262,6 +262,17 @@ lemma of_measure_apply_not_measurable {μ : measure α} [finite_measure μ]
   of_measure μ i = 0 :=
 if_neg hi
 
+def of_measure' (μ : measure α) : vector_measure α ℝ≥0∞ := 
+{ measure_of := λ i : set α, if measurable_set i then μ i else 0,
+  empty := by simp [μ.empty],
+  not_measurable := λ _ hi, if_neg hi,
+  m_Union := λ _ hf₁ hf₂, 
+  begin
+    rw summable.has_sum_iff ennreal.summable,
+    { rw [if_pos (measurable_set.Union hf₁), measure_theory.measure_Union hf₂ hf₁],
+      exact tsum_congr (λ n, if_pos (hf₁ n)) },
+  end }
+
 variables {M : Type*} [add_comm_group M] [topological_space M]
 
 /-- The zero signed measure. -/
