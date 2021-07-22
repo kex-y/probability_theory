@@ -16,9 +16,6 @@ lemma measurable_set.symm_diff [measurable_space α] {u v : set α}
   (hu : measurable_set u) (hv : measurable_set v) : measurable_set (u Δ v) := 
 (hu.diff hv).union (hv.diff hu)
 
-lemma symm_diff_subset_union (u v : α) [boolean_algebra α] : u Δ v ≤ u ⊔ v := 
-sup_le (le_trans sdiff_le le_sup_left) (le_trans sdiff_le le_sup_right)
-
 end PR
 
 variables {α β : Type*} [measurable_space α]
@@ -63,21 +60,6 @@ begin
     exact false.elim (hx₂ hx₁) }
 end
 
--- Generalize to `has_sup α`
-lemma set.union_symm_diff (s t : set α) : s ∪ s Δ t = s ∪ t :=
-begin
-  ext x, split,
-  { rintro (h | h | h),
-    { exact set.mem_union_left _ h },
-    { exact set.mem_union_left _ ((set.mem_diff x).1 h).1 },
-    { exact set.mem_union_right _ ((set.mem_diff x).1 h).1 } },
-  { rintro (h | h),
-    { exact set.mem_union_left _ h },
-    { by_cases h' : x ∉ s,
-      { exact set.mem_union_right _ (set.mem_union_right _ ⟨h, h'⟩) },
-      { exact set.mem_union_left _ (not_not.1 h') } } }
-end
-
 lemma measure_union_zero_set (μ : measure α) {s t : set α} (hs : μ s = 0) :
   μ (t ∪ s) = μ t := 
 begin
@@ -108,15 +90,6 @@ begin
         ennreal.zero_to_real, sub_zero],
     exact ennreal.to_real_nonneg },
 end 
-
-lemma inter_symm_diff_inter_subset (u v w : set α) : 
-  (w ∩ u) Δ (w ∩ v) ⊆ u Δ v :=
-begin
-  rintro x (⟨⟨hxw, hxu⟩, hx⟩ | ⟨⟨hxw, hxv⟩, hx⟩);
-  rw [set.mem_inter_eq, not_and] at hx,
-  { exact or.inl ⟨hxu, hx hxw⟩ },
-  { exact or.inr ⟨hxv, hx hxw⟩ }
-end
 
 lemma subset_positive_null_set {s : signed_measure α} {u w t : set α} 
   (hw : measurable_set w) (ht : measurable_set t)
@@ -193,8 +166,11 @@ begin
   { refine subset_positive_null_set _ _ (positive_union_positive hu hsu hv hsv) hs _ _,
     { exact (hw.inter hu).symm_diff (hw.inter hv) },
     { exact hu.symm_diff hv },
-    { exact symm_diff_subset_union u v },
-    { exact inter_symm_diff_inter_subset _ _ _ } },
+    { exact symm_diff_le_sup u v },
+    { rintro x (⟨⟨hxw, hxu⟩, hx⟩ | ⟨⟨hxw, hxv⟩, hx⟩);
+      rw [set.mem_inter_eq, not_and] at hx,
+      { exact or.inl ⟨hxu, hx hxw⟩ },
+      { exact or.inr ⟨hxv, hx hxw⟩ } } },
   obtain ⟨huv, hvu⟩ := of_diff_eq_zero_of_symm_diff_eq_zero_positive 
     (hw.inter hu) (hw.inter hv) 
     (positive_subset_positive hsu (w.inter_subset_right u)) 
@@ -211,8 +187,11 @@ begin
   { refine subset_negative_null_set _ _ (negative_union_negative hu hsu hv hsv) hs _ _,
     { exact (hw.inter hu).symm_diff (hw.inter hv) },
     { exact hu.symm_diff hv },
-    { exact symm_diff_subset_union u v },
-    { exact inter_symm_diff_inter_subset _ _ _ } },
+    { exact symm_diff_le_sup u v },
+    { rintro x (⟨⟨hxw, hxu⟩, hx⟩ | ⟨⟨hxw, hxv⟩, hx⟩);
+      rw [set.mem_inter_eq, not_and] at hx,
+      { exact or.inl ⟨hxu, hx hxw⟩ },
+      { exact or.inr ⟨hxv, hx hxw⟩ } } },
   obtain ⟨huv, hvu⟩ := of_diff_eq_zero_of_symm_diff_eq_zero_negative 
     (hw.inter hu) (hw.inter hv) 
     (negative_subset_negative hsu (w.inter_subset_right u)) 
