@@ -8,6 +8,19 @@ the Jordan decomposition theorem and the Lebesgue decomposition theorem.
 noncomputable theory
 open_locale classical big_operators nnreal ennreal
 
+section PR
+
+variables {α : Type*}
+
+lemma measurable_set.symm_diff [measurable_space α] {u v : set α} 
+  (hu : measurable_set u) (hv : measurable_set v) : measurable_set (u Δ v) := 
+(hu.diff hv).union (hv.diff hu)
+
+lemma symm_diff_subset_union (u v : α) [boolean_algebra α] : u Δ v ≤ u ⊔ v := 
+sup_le (le_trans sdiff_le le_sup_left) (le_trans sdiff_le le_sup_right)
+
+end PR
+
 variables {α β : Type*} [measurable_space α]
 
 open measure_theory
@@ -74,9 +87,140 @@ begin
   exact le_refl _,
 end 
 
-/-- The Jordan decomposition of a signed measure is unique. 
+/-- A Jordan decomposition provides a Hahn decomposition. -/
+lemma exists_compl_positive_negative_of_exists_sigular_sub 
+  {s : signed_measure α} {μ ν : measure α}
+  [hμ : finite_measure μ] [hν : finite_measure ν] 
+  (h : μ ⊥ ν ∧ s = @of_sub_measure _ _ μ ν hμ hν) :
+  ∃ S (hS₁ : measurable_set S) (hS₄: s.negative S) (hS₅: s.positive Sᶜ), 
+  μ S = 0 ∧ ν Sᶜ = 0 :=
+begin
+  obtain ⟨⟨S, hS₁, hS₂, hS₃⟩, h₁⟩ := h,
+  refine ⟨S, hS₁, _, _, hS₂, hS₃⟩,
+  { intros A hA hA₁,
+    rw [h₁, of_sub_measure_apply hA₁, 
+        show μ A = 0, by exact nonpos_iff_eq_zero.1 (hS₂ ▸ measure_mono hA), 
+        ennreal.zero_to_real, zero_sub, neg_le, neg_zero],
+    exact ennreal.to_real_nonneg },
+  { intros A hA hA₁,
+    rw [h₁, of_sub_measure_apply hA₁, 
+        show ν A = 0, by exact nonpos_iff_eq_zero.1 (hS₃ ▸ measure_mono hA), 
+        ennreal.zero_to_real, sub_zero],
+    exact ennreal.to_real_nonneg },
+end 
 
-The remaining part is a slog. I will comeback to it later on. -/
+lemma inter_symm_diff_inter_subset (u v w : set α) : 
+  (w ∩ u) Δ (w ∩ v) ⊆ u Δ v :=
+begin
+  rintro x (⟨⟨hxw, hxu⟩, hx⟩ | ⟨⟨hxw, hxv⟩, hx⟩);
+  rw [set.mem_inter_eq, not_and] at hx,
+  { exact or.inl ⟨hxu, hx hxw⟩ },
+  { exact or.inr ⟨hxv, hx hxw⟩ }
+end
+
+lemma subset_positive_null_set {s : signed_measure α} {u w t : set α} 
+  (hw : measurable_set w) (ht : measurable_set t)
+  (hsu : s.positive u) (ht₁ : s t = 0) (ht₂ : t ⊆ u) (hwt : w ⊆ t) : s w = 0 :=
+begin
+  have : s w + s (t \ w) = 0,
+  { rw [← ht₁, ← measure_of_union set.disjoint_diff hw (ht.diff hw), 
+        set.union_diff_self, set.union_eq_self_of_subset_left hwt] },
+  rw add_eq_zero_iff' at this,
+  exacts [this.1, hsu _ (hwt.trans ht₂) hw, hsu _ ((t.diff_subset w).trans ht₂) (ht.diff hw)],
+end
+
+lemma subset_negative_null_set {s : signed_measure α} {u w t : set α} 
+  (hw : measurable_set w) (ht : measurable_set t)
+  (hsu : s.negative u) (ht₁ : s t = 0) (ht₂ : t ⊆ u) (hwt : w ⊆ t) : s w = 0 :=
+begin
+  have : s w + s (t \ w) = 0,
+  { rw [← ht₁, ← measure_of_union set.disjoint_diff hw (ht.diff hw), 
+        set.union_diff_self, set.union_eq_self_of_subset_left hwt] },
+  linarith [hsu _ (hwt.trans ht₂) hw, hsu _ ((t.diff_subset w).trans ht₂) (ht.diff hw)]
+end
+
+lemma set.diff_disjoint_diff (u v : set α) : disjoint (u \ v) (v \ u) :=
+set.disjoint_of_subset_left (u.diff_subset v) set.disjoint_diff
+
+lemma of_diff_eq_zero_of_symm_diff_eq_zero_positive {s : signed_measure α} {u v : set α} 
+  (hu : measurable_set u) (hv : measurable_set v) 
+  (hsu : s.positive u) (hsv : s.positive v) (hs : s (u Δ v) = 0) : 
+  s (u \ v) = 0 ∧ s (v \ u) = 0 := 
+begin
+  rwa [← add_eq_zero_iff' (hsu _ (u.diff_subset v) (hu.diff hv)) 
+           (hsv _ (v.diff_subset u) (hv.diff hu)), 
+       ← measure_of_union (set.diff_disjoint_diff u v) (hu.diff hv) (hv.diff hu)]
+end
+
+lemma of_diff_eq_zero_of_symm_diff_eq_zero_negative {s : signed_measure α} {u v : set α} 
+  (hu : measurable_set u) (hv : measurable_set v) 
+  (hsu : s.negative u) (hsv : s.negative v) (hs : s (u Δ v) = 0) : 
+  s (u \ v) = 0 ∧ s (v \ u) = 0 := 
+begin
+  have a := hsu _ (u.diff_subset v) (hu.diff hv),
+  have b := hsv _ (v.diff_subset u) (hv.diff hu),
+  erw [measure_of_union (set.diff_disjoint_diff u v) (hu.diff hv) (hv.diff hu)] at hs,
+  split; linarith,
+end
+
+lemma of_diff_of_symm_diff_eq_zero {s : signed_measure α} {u v : set α} 
+  (hu : measurable_set u) (hv : measurable_set v)
+  (h : s (u Δ v) = 0) (h' : s (v \ u) = 0) : s (u \ v) + s v = s u :=
+begin 
+  symmetry,
+  calc s u = s (u \ v ∪ u ∩ v) : by simp only [set.diff_union_inter]
+       ... = s (u \ v) + s (u ∩ v) : 
+  by { rw measure_of_union,
+       { rw disjoint.comm,
+         exact set.disjoint_of_subset_left (u.inter_subset_right v) set.disjoint_diff },
+       { exact hu.diff hv },
+       { exact hu.inter hv } }
+       ... = s (u \ v) + s (u ∩ v ∪ v \ u) : 
+  by { rw [measure_of_union, h', add_zero],
+       { exact set.disjoint_of_subset_left (u.inter_subset_left v) set.disjoint_diff },
+       { exact hu.inter hv },
+       { exact hv.diff hu } }
+       ... = s (u \ v) + s v : 
+  by { rw [set.union_comm, set.inter_comm, set.diff_union_inter] } 
+end
+
+lemma of_inter_eq_of_symm_diff_eq_zero_positive {s : signed_measure α} {u v w : set α} 
+  (hu : measurable_set u) (hv : measurable_set v) (hw : measurable_set w)
+  (hsu : s.positive u) (hsv : s.positive v) (hs : s (u Δ v) = 0) : 
+  s (w ∩ u) = s (w ∩ v) := 
+begin
+  have hwuv : s ((w ∩ u) Δ (w ∩ v)) = 0,
+  { refine subset_positive_null_set _ _ (positive_union_positive hu hsu hv hsv) hs _ _,
+    { exact (hw.inter hu).symm_diff (hw.inter hv) },
+    { exact hu.symm_diff hv },
+    { exact symm_diff_subset_union u v },
+    { exact inter_symm_diff_inter_subset _ _ _ } },
+  obtain ⟨huv, hvu⟩ := of_diff_eq_zero_of_symm_diff_eq_zero_positive 
+    (hw.inter hu) (hw.inter hv) 
+    (positive_subset_positive hsu (w.inter_subset_right u)) 
+    (positive_subset_positive hsv (w.inter_subset_right v)) hwuv,
+  rw [← of_diff_of_symm_diff_eq_zero (hw.inter hu) (hw.inter hv) hwuv hvu, huv, zero_add]
+end
+
+lemma of_inter_eq_of_symm_diff_eq_zero_negative {s : signed_measure α} {u v w : set α} 
+  (hu : measurable_set u) (hv : measurable_set v) (hw : measurable_set w)
+  (hsu : s.negative u) (hsv : s.negative v) (hs : s (u Δ v) = 0) : 
+  s (w ∩ u) = s (w ∩ v) := 
+begin
+  have hwuv : s ((w ∩ u) Δ (w ∩ v)) = 0,
+  { refine subset_negative_null_set _ _ (negative_union_negative hu hsu hv hsv) hs _ _,
+    { exact (hw.inter hu).symm_diff (hw.inter hv) },
+    { exact hu.symm_diff hv },
+    { exact symm_diff_subset_union u v },
+    { exact inter_symm_diff_inter_subset _ _ _ } },
+  obtain ⟨huv, hvu⟩ := of_diff_eq_zero_of_symm_diff_eq_zero_negative 
+    (hw.inter hu) (hw.inter hv) 
+    (negative_subset_negative hsu (w.inter_subset_right u)) 
+    (negative_subset_negative hsv (w.inter_subset_right v)) hwuv,
+  rw [← of_diff_of_symm_diff_eq_zero (hw.inter hu) (hw.inter hv) hwuv hvu, huv, zero_add]
+end
+
+/-- The Jordan decomposition of a signed measure is unique. -/
 theorem singular_sub_unique {s : signed_measure α} {μ₁ ν₁ μ₂ ν₂ : measure α} 
   [hμ₁ : finite_measure μ₁] [hν₁ : finite_measure ν₁] 
   [hμ₂ : finite_measure μ₂] [hν₂ : finite_measure ν₂] 
@@ -84,70 +228,74 @@ theorem singular_sub_unique {s : signed_measure α} {μ₁ ν₁ μ₂ ν₂ : m
   (h₂ : μ₂ ⊥ ν₂ ∧ s = @of_sub_measure _ _ μ₂ ν₂ hμ₂ hν₂) :
   μ₁ = μ₂ ∧ ν₁ = ν₂ :=
 begin
-  obtain ⟨⟨S, hS₁, hS₂, hS₃⟩, h₁⟩ := h₁,
-  have hS₄ : s.negative S,
-  { intros A hA hA₁,
-    rw [h₁, of_sub_measure_apply hA₁, 
-        show μ₁ A = 0, by exact nonpos_iff_eq_zero.1 (hS₂ ▸ measure_mono hA), 
-        ennreal.zero_to_real, zero_sub, neg_le, neg_zero],
-    exact ennreal.to_real_nonneg },
-  have hS₅ : s.positive Sᶜ,
-  { intros A hA hA₁,
-    rw [h₁, of_sub_measure_apply hA₁, 
-        show ν₁ A = 0, by exact nonpos_iff_eq_zero.1 (hS₃ ▸ measure_mono hA), 
-        ennreal.zero_to_real, sub_zero],
-    exact ennreal.to_real_nonneg },
-
-  obtain ⟨⟨T, hT₁, hT₂, hT₃⟩, h₂⟩ := h₂,
-  have hT₄ : s.negative T,
-  { intros A hA hA₁,
-    rw [h₂, of_sub_measure_apply hA₁, 
-        show μ₂ A = 0, by exact nonpos_iff_eq_zero.1 (hT₂ ▸ measure_mono hA), 
-        ennreal.zero_to_real, zero_sub, neg_le, neg_zero],
-    exact ennreal.to_real_nonneg },
-  have hT₅ : s.positive Tᶜ,
-  { intros A hA hA₁,
-    rw [h₂, of_sub_measure_apply hA₁, 
-        show ν₂ A = 0, by exact nonpos_iff_eq_zero.1 (hT₃ ▸ measure_mono hA), 
-        ennreal.zero_to_real, sub_zero],
-    exact ennreal.to_real_nonneg },
+  obtain ⟨S, hS₁, hS₂, hS₃, hS₄, hS₅⟩ := 
+    exists_compl_positive_negative_of_exists_sigular_sub h₁,
+  obtain ⟨T, hT₁, hT₂, hT₃, hT₄, hT₅⟩ := 
+    exists_compl_positive_negative_of_exists_sigular_sub h₂,
   obtain ⟨hST₁, hST₂⟩ := of_symm_diff_compl_positive_negative hS₁.compl hT₁.compl 
-    ⟨hS₅, (compl_compl S).symm ▸ hS₄⟩ ⟨hT₅, (compl_compl T).symm ▸ hT₄⟩,
+    ⟨hS₃, (compl_compl S).symm ▸ hS₂⟩ ⟨hT₃, (compl_compl T).symm ▸ hT₂⟩,
 
   rw [compl_compl, compl_compl] at hST₂,
   split,
   { refine measure_theory.measure.ext (λ i hi, _), 
     have hμ₁ : (μ₁ i).to_real = s (i ∩ Sᶜ),
-    { rw [h₁, of_sub_measure_apply (hi.inter hS₁.compl), 
+    { rw [h₁.2, of_sub_measure_apply (hi.inter hS₁.compl), 
           show ν₁ (i ∩ Sᶜ) = 0, by exact nonpos_iff_eq_zero.1 
-            (hS₃ ▸ measure_mono (set.inter_subset_right _ _)), 
+            (hS₅ ▸ measure_mono (set.inter_subset_right _ _)), 
           ennreal.zero_to_real, sub_zero],
       conv_lhs { rw ← set.inter_union_compl i S },
       rw [measure_union, show μ₁ (i ∩ S) = 0, by exact nonpos_iff_eq_zero.1 
-            (hS₂ ▸ measure_mono (set.inter_subset_right _ _)), zero_add], 
+            (hS₄ ▸ measure_mono (set.inter_subset_right _ _)), zero_add], 
       { exact set.disjoint_of_subset_left (set.inter_subset_right _ _) 
           (set.disjoint_of_subset_right (set.inter_subset_right _ _) S.disjoint_compl) },
       { exact hi.inter hS₁ },
       { exact hi.inter hS₁.compl } },
     have hμ₂ : (μ₂ i).to_real = s (i ∩ Tᶜ),
-    { rw [h₂, of_sub_measure_apply (hi.inter hT₁.compl), 
+    { rw [h₂.2, of_sub_measure_apply (hi.inter hT₁.compl), 
           show ν₂ (i ∩ Tᶜ) = 0, by exact nonpos_iff_eq_zero.1 
-            (hT₃ ▸ measure_mono (set.inter_subset_right _ _)), 
+            (hT₅ ▸ measure_mono (set.inter_subset_right _ _)), 
           ennreal.zero_to_real, sub_zero],
       conv_lhs { rw ← set.inter_union_compl i T },
       rw [measure_union, show μ₂ (i ∩ T) = 0, by exact nonpos_iff_eq_zero.1 
-            (hT₂ ▸ measure_mono (set.inter_subset_right _ _)), zero_add], 
+            (hT₄ ▸ measure_mono (set.inter_subset_right _ _)), zero_add], 
+      { exact set.disjoint_of_subset_left (set.inter_subset_right _ _) 
+          (set.disjoint_of_subset_right (set.inter_subset_right _ _) T.disjoint_compl) },
+      { exact hi.inter hT₁ },
+      { exact hi.inter hT₁.compl } }, 
+    rw [← ennreal.to_real_eq_to_real (measure_lt_top _ _) (measure_lt_top _ _), 
+        hμ₁, hμ₂],
+    exact of_inter_eq_of_symm_diff_eq_zero_positive hS₁.compl hT₁.compl hi hS₃ hT₃ hST₁,
+    all_goals { apply_instance } },
+
+  { refine measure_theory.measure.ext (λ i hi, _), 
+    have hν₁ : (ν₁ i).to_real = - s (i ∩ S),
+    { rw [h₁.2, of_sub_measure_apply (hi.inter hS₁), 
+          show μ₁ (i ∩ S) = 0, by exact nonpos_iff_eq_zero.1 
+            (hS₄ ▸ measure_mono (set.inter_subset_right _ _)), 
+          ennreal.zero_to_real, zero_sub],
+      conv_lhs { rw ← set.inter_union_compl i S },
+      rw [measure_union, show ν₁ (i ∩ Sᶜ) = 0, by exact nonpos_iff_eq_zero.1 
+            (hS₅ ▸ measure_mono (set.inter_subset_right _ _)), add_zero, neg_neg], 
+      { exact set.disjoint_of_subset_left (set.inter_subset_right _ _) 
+          (set.disjoint_of_subset_right (set.inter_subset_right _ _) S.disjoint_compl) },
+      { exact hi.inter hS₁ },
+      { exact hi.inter hS₁.compl } },
+    have hν₂ : (ν₂ i).to_real = - s (i ∩ T),
+    { rw [h₂.2, of_sub_measure_apply (hi.inter hT₁), 
+          show μ₂ (i ∩ T) = 0, by exact nonpos_iff_eq_zero.1 
+            (hT₄ ▸ measure_mono (set.inter_subset_right _ _)), 
+          ennreal.zero_to_real, zero_sub],
+      conv_lhs { rw ← set.inter_union_compl i T },
+      rw [measure_union, show ν₂ (i ∩ Tᶜ) = 0, by exact nonpos_iff_eq_zero.1 
+            (hT₅ ▸ measure_mono (set.inter_subset_right _ _)), add_zero, neg_neg], 
       { exact set.disjoint_of_subset_left (set.inter_subset_right _ _) 
           (set.disjoint_of_subset_right (set.inter_subset_right _ _) T.disjoint_compl) },
       { exact hi.inter hT₁ },
       { exact hi.inter hT₁.compl } },
-    
     rw [← ennreal.to_real_eq_to_real (measure_lt_top _ _) (measure_lt_top _ _), 
-        hμ₁, hμ₂],
-    
-    sorry,
-    all_goals { apply_instance } },
-  { sorry }
+        hν₁, hν₂, neg_eq_iff_neg_eq, neg_neg],
+    exact eq.symm (of_inter_eq_of_symm_diff_eq_zero_negative hS₁ hT₁ hi hS₂ hT₂ hST₂),
+    all_goals { apply_instance } }
 end
 
 lemma measure.exists_measure_pos_of_measure_Union_pos (μ : measure α) 
