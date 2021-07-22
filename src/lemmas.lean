@@ -237,17 +237,7 @@ end
 
 lemma set.union_inter_diff_eq {a b c : set α} (habc : a ⊆ b ∪ c) : 
   a ∩ b ∪ a ∩ c \ (a ∩ b) = a :=
-begin
-  ext x, split,
-  { rintro (h | h),
-    exacts [h.1, h.1.1] },
-  { intro ha,
-    by_cases x ∈ b,
-    { left, exact ⟨ha, h⟩ },
-    { right, 
-      obtain (ha' | ha') := habc ha,
-      exacts [false.elim (h  ha'), ⟨⟨ha, ha'⟩, not_and.2 (λ _, h)⟩] } }
-end
+by rwa [union_diff_self, ← inter_union_distrib_left, inter_eq_left_iff_subset]
 
 lemma set.union_inter_diff_disjoint {a b c : set α} : 
   disjoint (a ∩ b) (a ∩ c \ (a ∩ b)) := 

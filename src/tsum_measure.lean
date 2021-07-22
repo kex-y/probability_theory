@@ -53,54 +53,70 @@ begin
   exact (tsum_add (ennreal.summable) (ennreal.summable)).symm,
 end
 
+lemma tsum_measure_singular {μ : ℕ → measure α} {ν : measure α}
+  (h : ∀ n, μ n ⊥ ν) : tsum_measure μ ⊥ ν := 
+begin
+  choose s hs₁ hs₂ hs₃ using h,
+  refine ⟨⋂ n, s n, measurable_set.Inter hs₁, _, _⟩,
+  { rw tsum_measure_apply _ (measurable_set.Inter hs₁), 
+    convert tsum_zero,
+    exact funext (λ n, nonpos_iff_eq_zero.1 
+      (hs₂ n ▸ (measure_mono (set.Inter_subset s n)))),
+    apply_instance },
+  { rw set.compl_Inter,
+    refine nonpos_iff_eq_zero.1 ( le_trans (measure_Union_le _) (le_of_eq _)),
+    convert tsum_zero,
+    exact funext (λ n, hs₃ n),
+    apply_instance }
+end
+
 namespace signed_measure
 
 local infix ` . `:max := measure.with_density
 
+lemma with_density_tsum {μ : measure α} {f : ℕ → α → ℝ≥0∞} 
+  (hf : ∀ n, measurable (f n)) : μ . ∑' n, f n = tsum_measure (λ n, μ . (f n)) := 
+begin
+  refine measure_theory.measure.ext (λ s hs, _),
+  rw [tsum_measure_apply s hs, with_density_apply _ hs],
+  sorry,
+  -- exact lintegral_tsum,
+end
+
 /-- The Lebesgue decomposition theorem extended to σ-finite measures. -/
 theorem exists_singular_with_density' 
-  (μ ν : measure α) [sigma_finite μ] [sigma_finite ν] :
+  (μ ν : measure α) [finite_measure μ] [sigma_finite ν] :
   ∃ (ν₁ ν₂ : measure α) (hν : ν = ν₁ + ν₂), ν₁ ⊥ μ ∧ 
   ∃ (f : α → ℝ≥0∞) (hf : measurable f), ν₂ = μ . f := 
 begin
+  obtain ⟨S, hS⟩ := exists_disjoint_finite_spanning_sets_in ν,
 
-  obtain ⟨S, hS⟩ := exists_disjoint_finite_spanning_sets_in μ,
-  obtain ⟨T, hT⟩ := exists_disjoint_finite_spanning_sets_in ν,
-
-  have : ∀ n : ℕ, ∃ (ν₁ ν₂ : measure α) (hν : ν.restrict (T.set n) = ν₁ + ν₂), 
-    ν₁ ⊥ μ.restrict (S.set n) ∧ ∃ (f : α → ℝ≥0∞) (hf : measurable f), 
-    ν₂ = μ.restrict (S.set n) . f, 
+  have : ∀ n : ℕ, ∃ (ν₁ ν₂ : measure α) (hν : ν.restrict (S.set n) = ν₁ + ν₂), 
+    ν₁ ⊥ μ ∧ ∃ (f : α → ℝ≥0∞) (hf : measurable f), ν₂ = μ . f, 
   { intro n,
-    haveI : finite_measure (μ.restrict (S.set n)) := 
-      @restrict.finite_measure _ _ _ μ (fact_iff.2 (S.finite n)),
-    haveI : finite_measure (ν.restrict (T.set n)) := 
-      @restrict.finite_measure _ _ _ ν (fact_iff.2 (T.finite n)),
+    haveI : finite_measure (ν.restrict (S.set n)) := 
+      @restrict.finite_measure _ _ _ ν (fact_iff.2 (S.finite n)),
     exact exists_singular_with_density _ _ },
   
   choose ν₁ ν₂ hνa hνb f hνc hνd using this,
 
-  refine ⟨tsum_measure ν₁, tsum_measure ν₂, _, _, _⟩,
+  refine ⟨tsum_measure ν₁, tsum_measure ν₂, _, tsum_measure_singular hνb, _⟩,
   { rw tsum_measure_add,
     refine measure_theory.measure.ext (λ i hi, _),
     rw [tsum_measure_apply i hi],
     simp only [measure.coe_add, pi.add_apply],
-    rw [show ∑' n, (ν₁ n i + ν₂ n i) = ∑' n, (ν.restrict (T.set n)) i, 
+    rw [show ∑' n, (ν₁ n i + ν₂ n i) = ∑' n, (ν.restrict (S.set n)) i, 
         by exact tsum_congr (λ n, (hνa n).symm ▸ rfl), 
-        ← measure.restrict_Union_apply hT T.set_mem hi, T.spanning, 
+        ← measure.restrict_Union_apply hS S.set_mem hi, S.spanning, 
         measure.restrict_univ] },
-  { choose i hi₁ hi₂ hi₃ using hνb,
-    refine ⟨⋂ n, i n, measurable_set.Inter hi₁, _, _⟩,
-    { rw tsum_measure_apply _ (measurable_set.Inter hi₁), 
-      convert tsum_zero,
-      exact funext (λ n, nonpos_iff_eq_zero.1 
-        (hi₂ n ▸ (measure_mono (set.Inter_subset i n)))),
-      apply_instance },
-    { --rw [← @measure.restrict_univ _ _ μ, ← S.spanning, measure.restrict_apply, 
-      rw [set.compl_Inter],
+  { refine ⟨∑' n, f n, _, _⟩,
+    { convert measurable.ennreal_tsum hνc,
+      exact funext (λ x, tsum_apply (pi.summable.2 (λ n, ennreal.summable))) },
+    { refine measure_theory.measure.ext (λ i hi, _), 
+      simp_rw [tsum_measure_apply i hi, hνd],
       sorry
-    }
-   },
-  { sorry }
+
+    } }
 end
 
 end signed_measure

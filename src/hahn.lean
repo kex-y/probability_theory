@@ -1,4 +1,5 @@
 import signed_measure
+import order.symm_diff
 
 /- 
 This file contains the definition of positive and negative sets and 
@@ -583,6 +584,44 @@ begin
   rw [set.compl_eq_univ_diff, ← huniv, 
       set.union_diff_cancel_left (set.disjoint_iff.mp hdisj)],
   exact hj₂,
+end
+
+/-- The symmetric difference of two Hahn decompositions is a null-set. -/
+lemma of_symm_diff_compl_positive_negative {s : signed_measure α} 
+  {i j : set α} (hi : measurable_set i) (hj : measurable_set j) 
+  (hi' : s.positive i ∧ s.negative iᶜ) (hj' : s.positive j ∧ s.negative jᶜ) : 
+  s (i Δ j) = 0 ∧ s (iᶜ Δ jᶜ) = 0 :=
+begin
+  split,
+  { rw [symm_diff_def, set.diff_eq_compl_inter, set.diff_eq_compl_inter, 
+        set.sup_eq_union, measure_of_union, 
+        le_antisymm (hi'.2 _ (set.inter_subset_left _ _) 
+          (measurable_set.inter (measurable_set.compl hi) hj)) 
+          (hj'.1 _ ( set.inter_subset_right _ _) 
+          (measurable_set.inter (measurable_set.compl hi) hj)), 
+        le_antisymm (hj'.2 _ (set.inter_subset_left _ _) 
+          (measurable_set.inter (measurable_set.compl hj) hi)) 
+          (hi'.1 _ (set.inter_subset_right _ _) 
+          (measurable_set.inter (measurable_set.compl hj) hi)), add_zero],
+    { exact set.disjoint_of_subset_left (set.inter_subset_left _ _) 
+        (set.disjoint_of_subset_right (set.inter_subset_right _ _) 
+        (disjoint.comm.1 j.disjoint_compl)) },
+    { exact measurable_set.inter (measurable_set.compl hj) hi },
+    { exact measurable_set.inter (measurable_set.compl hi) hj } },
+  { rw [symm_diff_def, set.diff_eq_compl_inter, set.diff_eq_compl_inter,
+        compl_compl, compl_compl, set.sup_eq_union, measure_of_union, 
+        le_antisymm (hi'.2 _ (set.inter_subset_right _ _) 
+          (measurable_set.inter hj (measurable_set.compl hi))) 
+          (hj'.1 _ (set.inter_subset_left _ _) 
+          (measurable_set.inter hj (measurable_set.compl hi))),
+        le_antisymm (hj'.2 _ (set.inter_subset_right _ _) 
+          (measurable_set.inter hi (measurable_set.compl hj))) 
+          (hi'.1 _ (set.inter_subset_left _ _) 
+          (measurable_set.inter hi (measurable_set.compl hj))), add_zero],
+    { exact set.disjoint_of_subset_left (set.inter_subset_left _ _) 
+        (set.disjoint_of_subset_right (set.inter_subset_right _ _) j.disjoint_compl) },
+    { exact measurable_set.inter hj hi.compl },
+    { exact measurable_set.inter hi hj.compl } }
 end
 
 end signed_measure

@@ -50,6 +50,106 @@ begin
     exact false.elim (hx₂ hx₁) }
 end
 
+-- Generalize to `has_sup α`
+lemma set.union_symm_diff (s t : set α) : s ∪ s Δ t = s ∪ t :=
+begin
+  ext x, split,
+  { rintro (h | h | h),
+    { exact set.mem_union_left _ h },
+    { exact set.mem_union_left _ ((set.mem_diff x).1 h).1 },
+    { exact set.mem_union_right _ ((set.mem_diff x).1 h).1 } },
+  { rintro (h | h),
+    { exact set.mem_union_left _ h },
+    { by_cases h' : x ∉ s,
+      { exact set.mem_union_right _ (set.mem_union_right _ ⟨h, h'⟩) },
+      { exact set.mem_union_left _ (not_not.1 h') } } }
+end
+
+lemma measure_union_zero_set (μ : measure α) {s t : set α} (hs : μ s = 0) :
+  μ (t ∪ s) = μ t := 
+begin
+  refine le_antisymm (le_trans (measure_union_le _ _) _) 
+    (measure_mono (set.subset_union_left t s)),
+  rw [hs, add_zero], 
+  exact le_refl _,
+end 
+
+/-- The Jordan decomposition of a signed measure is unique. 
+
+The remaining part is a slog. I will comeback to it later on. -/
+theorem singular_sub_unique {s : signed_measure α} {μ₁ ν₁ μ₂ ν₂ : measure α} 
+  [hμ₁ : finite_measure μ₁] [hν₁ : finite_measure ν₁] 
+  [hμ₂ : finite_measure μ₂] [hν₂ : finite_measure ν₂] 
+  (h₁ : μ₁ ⊥ ν₁ ∧ s = @of_sub_measure _ _ μ₁ ν₁ hμ₁ hν₁) 
+  (h₂ : μ₂ ⊥ ν₂ ∧ s = @of_sub_measure _ _ μ₂ ν₂ hμ₂ hν₂) :
+  μ₁ = μ₂ ∧ ν₁ = ν₂ :=
+begin
+  obtain ⟨⟨S, hS₁, hS₂, hS₃⟩, h₁⟩ := h₁,
+  have hS₄ : s.negative S,
+  { intros A hA hA₁,
+    rw [h₁, of_sub_measure_apply hA₁, 
+        show μ₁ A = 0, by exact nonpos_iff_eq_zero.1 (hS₂ ▸ measure_mono hA), 
+        ennreal.zero_to_real, zero_sub, neg_le, neg_zero],
+    exact ennreal.to_real_nonneg },
+  have hS₅ : s.positive Sᶜ,
+  { intros A hA hA₁,
+    rw [h₁, of_sub_measure_apply hA₁, 
+        show ν₁ A = 0, by exact nonpos_iff_eq_zero.1 (hS₃ ▸ measure_mono hA), 
+        ennreal.zero_to_real, sub_zero],
+    exact ennreal.to_real_nonneg },
+
+  obtain ⟨⟨T, hT₁, hT₂, hT₃⟩, h₂⟩ := h₂,
+  have hT₄ : s.negative T,
+  { intros A hA hA₁,
+    rw [h₂, of_sub_measure_apply hA₁, 
+        show μ₂ A = 0, by exact nonpos_iff_eq_zero.1 (hT₂ ▸ measure_mono hA), 
+        ennreal.zero_to_real, zero_sub, neg_le, neg_zero],
+    exact ennreal.to_real_nonneg },
+  have hT₅ : s.positive Tᶜ,
+  { intros A hA hA₁,
+    rw [h₂, of_sub_measure_apply hA₁, 
+        show ν₂ A = 0, by exact nonpos_iff_eq_zero.1 (hT₃ ▸ measure_mono hA), 
+        ennreal.zero_to_real, sub_zero],
+    exact ennreal.to_real_nonneg },
+  obtain ⟨hST₁, hST₂⟩ := of_symm_diff_compl_positive_negative hS₁.compl hT₁.compl 
+    ⟨hS₅, (compl_compl S).symm ▸ hS₄⟩ ⟨hT₅, (compl_compl T).symm ▸ hT₄⟩,
+
+  rw [compl_compl, compl_compl] at hST₂,
+  split,
+  { refine measure_theory.measure.ext (λ i hi, _), 
+    have hμ₁ : (μ₁ i).to_real = s (i ∩ Sᶜ),
+    { rw [h₁, of_sub_measure_apply (hi.inter hS₁.compl), 
+          show ν₁ (i ∩ Sᶜ) = 0, by exact nonpos_iff_eq_zero.1 
+            (hS₃ ▸ measure_mono (set.inter_subset_right _ _)), 
+          ennreal.zero_to_real, sub_zero],
+      conv_lhs { rw ← set.inter_union_compl i S },
+      rw [measure_union, show μ₁ (i ∩ S) = 0, by exact nonpos_iff_eq_zero.1 
+            (hS₂ ▸ measure_mono (set.inter_subset_right _ _)), zero_add], 
+      { exact set.disjoint_of_subset_left (set.inter_subset_right _ _) 
+          (set.disjoint_of_subset_right (set.inter_subset_right _ _) S.disjoint_compl) },
+      { exact hi.inter hS₁ },
+      { exact hi.inter hS₁.compl } },
+    have hμ₂ : (μ₂ i).to_real = s (i ∩ Tᶜ),
+    { rw [h₂, of_sub_measure_apply (hi.inter hT₁.compl), 
+          show ν₂ (i ∩ Tᶜ) = 0, by exact nonpos_iff_eq_zero.1 
+            (hT₃ ▸ measure_mono (set.inter_subset_right _ _)), 
+          ennreal.zero_to_real, sub_zero],
+      conv_lhs { rw ← set.inter_union_compl i T },
+      rw [measure_union, show μ₂ (i ∩ T) = 0, by exact nonpos_iff_eq_zero.1 
+            (hT₂ ▸ measure_mono (set.inter_subset_right _ _)), zero_add], 
+      { exact set.disjoint_of_subset_left (set.inter_subset_right _ _) 
+          (set.disjoint_of_subset_right (set.inter_subset_right _ _) T.disjoint_compl) },
+      { exact hi.inter hT₁ },
+      { exact hi.inter hT₁.compl } },
+    
+    rw [← ennreal.to_real_eq_to_real (measure_lt_top _ _) (measure_lt_top _ _), 
+        hμ₁, hμ₂],
+    
+    sorry,
+    all_goals { apply_instance } },
+  { sorry }
+end
+
 lemma measure.exists_measure_pos_of_measure_Union_pos (μ : measure α) 
   (f : ℕ → set α) (hf : 0 < μ (⋃ n, f n)) : 
   ∃ n, 0 < μ (f n) :=
