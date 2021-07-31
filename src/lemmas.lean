@@ -51,10 +51,11 @@ section filter
 
 open filter
 
-lemma tendsto_top_of_pos_summable_inv {f : ℕ → ℝ} 
+lemma tendsto_top_of_pos_summable_inv 
+  [linear_ordered_field α] [topological_space α] [order_topology α] {f : ℕ → α} 
   (hf : summable f⁻¹) (hf' : ∀ n, 0 < f n) : tendsto f at_top at_top :=
 begin
-  rw [show  f = f⁻¹⁻¹, by { ext, simp }],
+  rw [show f = f⁻¹⁻¹, by { ext, simp }],
   apply filter.tendsto.inv_tendsto_zero,
   apply tendsto_nhds_within_of_tendsto_nhds_of_eventually_within _ 
     (summable.tendsto_at_top_zero hf),
@@ -202,9 +203,7 @@ section nat
 
 lemma nat.sub_one_lt {n : ℕ} (hn : 1 ≤ n) : n - 1 < n :=
 begin
-  induction n with k hk,
-  { norm_num at hn },
-  { rw [nat.succ_sub_succ_eq_sub, nat.sub_zero], exact lt_add_one k }
+  exact buffer.lt_aux_2 hn,
 end
 
 lemma not_forall_le_neg_nat (a : ℝ) (ha : ∀ n : ℕ, a ≤ -n) : false :=
