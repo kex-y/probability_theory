@@ -13,12 +13,12 @@ namespace measure_theory
 
 local infix ` . `:max := measure.with_density
 
-local notation π ` .[`:max 𝓕:max `] `:0 f := @measure.with_density _ 𝓕 π f
-local notation μ ` ≪[`:max 𝓕:max `] `:0 ν := @measure.absolutely_continuous _ 𝓕 μ ν 
+local notation π ` .[`:25 𝓕:25 `] `:0 f := @measure.with_density _ 𝓕 π f
+local notation μ ` ≪[`:25 𝓕:25 `] `:0 ν := @measure.absolutely_continuous _ 𝓕 μ ν 
 
-local notation `∫⁻[` 𝓕 `]` binders `, ` r:(scoped:60 f, f) ` ∂` μ:70 := 
+local notation `∫⁻[`:25 𝓕:25 `]` binders `, ` r:(scoped:60 f, f) ` ∂` μ:70 := 
   @lintegral _ 𝓕 μ r
-local notation `∫⁻[` 𝓕 `]` binders ` in ` s `, ` r:(scoped:60 f, f) ` ∂` μ:70 :=
+local notation `∫⁻[`:25 𝓕:25 `]` binders ` in ` s `, ` r:(scoped:60 f, f) ` ∂` μ:70 :=
   @lintegral _ 𝓕 (@measure.restrict _ 𝓕 μ s) r
 
 section
