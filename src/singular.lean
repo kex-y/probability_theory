@@ -60,16 +60,6 @@ begin
     exact false.elim (hx₂ hx₁) }
 end
 
--- PR or remove?
-lemma measure_union_zero_set (μ : measure α) {s t : set α} (hs : μ s = 0) :
-  μ (t ∪ s) = μ t := 
-begin
-  refine le_antisymm (le_trans (measure_union_le _ _) _) 
-    (measure_mono (set.subset_union_left t s)),
-  rw [hs, add_zero], 
-  exact le_refl _,
-end 
-
 /-- A Jordan decomposition provides a Hahn decomposition. -/
 lemma exists_compl_positive_negative_of_exists_sigular_sub 
   {s : signed_measure α} {μ ν : measure α}
@@ -657,6 +647,7 @@ begin
   all_goals { apply_instance }
 end
 
+-- duplicated `measure.with_density_absolutely_continuous` in `conditional` 
 lemma with_density.absolutely_continuous (f : α → ℝ≥0∞) : μ . f ≪ μ :=
 begin
   refine measure.absolutely_continuous.mk (λ A hA h, _),

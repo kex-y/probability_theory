@@ -25,6 +25,7 @@ section
 
 variables [measurable_space α] {μ : measure α}
 
+-- PRed
 lemma lintegral_in_measure_zero {s : set α} {f : α → ℝ≥0∞} (hs' : μ s = 0) : 
   ∫⁻ x in s, f x ∂μ = 0 :=
 begin
@@ -32,6 +33,7 @@ begin
   refine measure.restrict_eq_zero.2 hs',
 end
 
+-- PRed
 lemma with_density.finite_measure [finite_measure μ] {f : α → ℝ≥0∞} 
   (hf : ∫⁻ a, f a ∂μ < ∞) : finite_measure (μ . f) := 
 { measure_univ_lt_top := 
@@ -44,6 +46,7 @@ begin
   exact ennreal.add_lt_top.2 ⟨hf₂, hg₂⟩,
 end
 
+-- PRed
 lemma with_density_add {f g : α → ℝ≥0∞} (hf : measurable f) (hg : measurable g) : 
   μ . (f + g) = μ . f + μ . g :=
 begin
@@ -95,6 +98,7 @@ end
 
 open measure_theory.measure probability_theory
 
+-- PRed
 lemma measure.with_density_absolutely_continuous [measurable_space α]
   (μ : measure α) (f : α → ℝ≥0∞) : μ . f ≪ μ :=
 begin
