@@ -1,3 +1,5 @@
+(Results in the repo has been merged into [mathlib](https://github.com/leanprover-community/mathlib) and is maintained from there)
+
 # Propbability Theory
 
 This repo contains some definitions from measure theory and their immediate results. 
