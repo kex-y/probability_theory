@@ -4,7 +4,7 @@
 
 This repo contains some definitions from measure theory and their immediate results. 
 
-The most important result in this repo is the [Radon-Nikodym theorem](https://github.com/JasonKYi/probability_theory/blob/main/src/singular.lean#L479). 
+The most important result in this repo is the Radon-Nikodym theorem (see [here](https://github.com/leanprover-community/mathlib/blob/4435e909d7394707e958143ca914544c1cd9ee0c/src/measure_theory/decomposition/radon_nikodym.lean)). 
 
 Other important theorems include 
 - the Hahn decomposition theorem
