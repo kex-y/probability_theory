@@ -3,6 +3,8 @@ import data.real.ereal
 import lemmas
 
 /-
+This file has been merged into mathlib. `measure_theory.vector_measure`
+
 We will in this file attempt to define signed measure and develope basic APIs 
 for its use.
 -/

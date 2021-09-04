@@ -8,16 +8,6 @@ the Jordan decomposition theorem and the Lebesgue decomposition theorem.
 noncomputable theory
 open_locale classical big_operators nnreal ennreal
 
-section PR
-
-variables {α : Type*}
-
-lemma measurable_set.symm_diff [measurable_space α] {u v : set α} 
-  (hu : measurable_set u) (hv : measurable_set v) : measurable_set (u Δ v) := 
-(hu.diff hv).union (hv.diff hu)
-
-end PR
-
 variables {α β : Type*} [measurable_space α]
 
 open measure_theory
