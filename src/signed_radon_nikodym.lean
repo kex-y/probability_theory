@@ -1,6 +1,6 @@
 import measure_theory.decomposition.radon_nikodym
 import measure_theory.integral.set_integral
-import 
+import measure_theory.function.ae_eq_of_integral
 
 noncomputable theory
 open_locale classical measure_theory nnreal ennreal
@@ -63,6 +63,16 @@ begin
     exact hf.integrable_on.restrict measurable_set.univ },
 end
 
+@[simp]
+lemma with_density_signed_measure_zero : 
+  μ.with_density_signed_measure 0 = 0 :=
+begin
+  ext1 i hi,
+  erw [with_density_signed_measure_apply (integrable_zero α ℝ μ) hi],
+  simp,
+end
+
+@[simp]
 lemma with_density_signed_measure_neg (hf : integrable f μ) : 
   μ.with_density_signed_measure (-f) = -μ.with_density_signed_measure f :=
 begin
@@ -72,6 +82,7 @@ begin
   refl
 end
 
+@[simp]
 lemma with_density_signed_measure_add (hf : integrable f μ) (hg : integrable g μ) :
   μ.with_density_signed_measure (f + g) = 
   μ.with_density_signed_measure f + μ.with_density_signed_measure g :=
@@ -85,12 +96,14 @@ begin
   { exact hg.integrable_on.restrict measurable_set.univ }
 end
 
+@[simp]
 lemma with_density_signed_measure_sub (hf : integrable f μ) (hg : integrable g μ) :
   μ.with_density_signed_measure (f - g) = 
   μ.with_density_signed_measure f - μ.with_density_signed_measure g :=
 by rw [sub_eq_add_neg, sub_eq_add_neg, with_density_signed_measure_add hf hg.neg, 
        with_density_signed_measure_neg hg]
 
+@[simp]
 lemma with_density_signed_measure_smul (r : ℝ) (hf : integrable f μ) :
   μ.with_density_signed_measure (r • f) = r • μ.with_density_signed_measure f :=
 begin
@@ -114,6 +127,21 @@ begin
 end
 
 end with_density_signed_measure
+
+section
+
+variables {μ : measure α} {f g : α → ℝ}
+
+/-- Having the same density implies the underlying functions are equal almost everywhere. -/
+lemma ae_eq_of_with_density_signed_measure_eq (hf : integrable f μ) (hg : integrable g μ) 
+  (hfg : μ.with_density_signed_measure f = μ.with_density_signed_measure g) :
+  f =ᵐ[μ] g :=
+begin
+  refine integrable.ae_eq_of_forall_set_integral_eq f g hf hg (λ i hi _, _),
+  rw [← with_density_signed_measure_apply hf hi, hfg, with_density_signed_measure_apply hg hi]
+end
+
+end
 
 end measure
 
