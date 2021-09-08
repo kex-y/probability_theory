@@ -54,15 +54,17 @@ begin
 end
 
 end
-#exit
 
 /-- If `f` is measurable on a sub-σ-algebra `m`, then the condition of `f` on `n` is 
 equal to `f` almost everywhere. -/
 lemma ae_eq_of_measurable (hle : m ≤ n) (hfm : measurable[m] f) 
   (hfi : measure_theory.integrable f μ) : 
   condition_on hle f hfi =ᵐ[μ.trim hle] f :=
-ae_eq_of_with_density_signed_measure_eq 
-  (integrable _ _) (integrable.trim hle hfi hfm) (condition_on_spec _ _)
+begin
+  refine integrable.ae_eq_of_forall_set_integral_eq _ _ (integrable _ _) 
+    (hfi.trim hle hfm) (λ i hi _, _),
+  rw [condition_on_spec hle hfi hi, ← set_integral_trim hle hfm hi],
+end
 
 lemma ae_eq_of_measurable' (hle : m ≤ n) (hfm : measurable[m] f) 
   (hfi : measure_theory.integrable f μ) : 
@@ -77,14 +79,14 @@ lemma add :
   condition_on hle (f + g) (hfi.add hgi) =ᵐ[μ.trim hle] 
   condition_on hle f hfi + condition_on hle g hgi :=
 begin
-  sorry
-  -- refine ae_eq_of_with_density_signed_measure_eq 
-  --   (integrable _ _) ((integrable _ _).add (integrable _ _)) _,
-  -- rw [with_density_signed_measure_add (integrable _ _) (integrable _ _), 
-  --     condition_on_spec, condition_on_spec, condition_on_spec],
-  -- { rw with_density_signed_measure_add (hfi.trim hle _),
-
-  -- },
+  refine integrable.ae_eq_of_forall_set_integral_eq _ _ (integrable _ _) 
+    ((integrable _ _).add (integrable _ _)) (λ i hi _, _),
+  rw [condition_on_spec hle (hfi.add hgi) hi, 
+      integral_add' hfi.integrable_on hgi.integrable_on, 
+      ← condition_on_spec hle hfi hi, ← condition_on_spec hle hgi hi, 
+      ← integral_add'],
+  { exact @integrable.integrable_on _ _ m _ _ _ _ _ (integrable hle hfi) },
+  { exact @integrable.integrable_on _ _ m _ _ _ _ _ (integrable hle hgi) },
 end
 
 end
