@@ -35,21 +35,21 @@ section with_density_signed_measure
 
 variables {μ ν : measure α} {f g : α → ℝ}
 
-lemma is_finite_measure_of_real_of_integrable (hf : integrable f μ) :
+lemma is_finite_measure_of_real_of_integrable (hf : has_finite_integral f μ) :
   is_finite_measure (μ.with_density (λ x, ennreal.of_real (f x))) :=
 is_finite_measure_with_density 
-  (lt_of_le_of_lt (lintegral_mono (λ x, ennreal.of_real_le_norm (f x))) hf.2)
+  (lt_of_le_of_lt (lintegral_mono (λ x, ennreal.of_real_le_norm (f x))) hf)
 
 /-- Given a measure `μ` and a integrable function `f`, `μ.with_density_signed_measure f` is 
 the signed measure which maps the set `s` to `∫ₛ f⁺ ∂μ - ∫ₛ f⁻ ∂μ`. -/
 def with_density_signed_measure {m : measurable_space α} 
   (μ : measure α) (f : α → ℝ) : signed_measure α :=
-if hf : integrable f μ then
-@to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (f x)))
-(is_finite_measure_of_real_of_integrable hf)
--
-@to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (-f x)))
-(is_finite_measure_of_real_of_integrable (integrable_neg_iff.2 hf))
+if hf : has_finite_integral f μ then
+  @to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (f x)))
+  (is_finite_measure_of_real_of_integrable hf)
+  -
+  @to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (-f x)))
+  (is_finite_measure_of_real_of_integrable (has_finite_integral_neg_iff.2 hf))
 else 0
 
 lemma with_density_signed_measure_apply (hf : integrable f μ) 
@@ -57,7 +57,7 @@ lemma with_density_signed_measure_apply (hf : integrable f μ)
   μ.with_density_signed_measure f i = ∫ x in i, f x ∂μ :=
 begin
   rw integral_eq_lintegral_pos_part_sub_lintegral_neg_part,
-  { rw [with_density_signed_measure, dif_pos hf],
+  { rw [with_density_signed_measure, dif_pos hf.2],
     simp [if_pos hi, with_density_apply _ hi] },
   { rw ← integrable_on_univ,
     exact hf.integrable_on.restrict measurable_set.univ },
@@ -117,11 +117,14 @@ lemma with_density_signed_measure_absolutely_continuous
   (μ : measure α) (f : α → ℝ) : 
   μ.with_density_signed_measure f ≪ μ.to_ennreal_vector_measure :=
 begin
-  by_cases hf : integrable f μ,
+  by_cases hf : has_finite_integral f μ,
   { refine vector_measure.absolutely_continuous.mk (λ i hi₁ hi₂, _),
     rw to_ennreal_vector_measure_apply_measurable hi₁ at hi₂,
-    rw [with_density_signed_measure_apply hf hi₁, measure.restrict_zero_set hi₂, 
-        integral_zero_measure] },
+    rw [with_density_signed_measure, dif_pos hf, vector_measure.sub_apply, 
+        to_signed_measure_apply_measurable hi₁, to_signed_measure_apply_measurable hi₁,
+        with_density_apply _ hi₁, with_density_apply _ hi₁, 
+        lintegral_in_measure_zero _ _ hi₂, lintegral_in_measure_zero _ _ hi₂, 
+        ennreal.zero_to_real, sub_zero] },
   { rw [with_density_signed_measure, dif_neg hf],
     exact vector_measure.absolutely_continuous.zero _ }
 end
@@ -276,6 +279,27 @@ begin
       { rw lintegral_univ,
         exact (lintegral_radon_nikodym_deriv_lt_top _ _).ne } } },
   { exact equiv_measure.right_inv μ }
+end
+
+-- more general version in PR
+lemma absolutely_continuous.add {s t : signed_measure α} {μ : measure α}
+  (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
+  s + t ≪ μ.to_ennreal_vector_measure := 
+begin
+  sorry
+end
+
+lemma radon_nikodym_deriv_add (s t : signed_measure α) (μ : measure α) [sigma_finite μ] 
+  (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
+  (s + t).radon_nikodym_deriv μ =ᵐ[μ] s.radon_nikodym_deriv μ + t.radon_nikodym_deriv μ :=
+begin
+  refine ae_eq_of_with_density_signed_measure_eq 
+    (integrable_radon_nikodym_deriv _ _) 
+    ((integrable_radon_nikodym_deriv _ _).add (integrable_radon_nikodym_deriv _ _)) _,
+  rw [with_density_radon_nikodym_deriv_eq _ _ (absolutely_continuous.add hs ht), 
+      with_density_signed_measure_add 
+        (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _), 
+      with_density_radon_nikodym_deriv_eq s μ hs, with_density_radon_nikodym_deriv_eq t μ ht]
 end
 
 end signed_measure
