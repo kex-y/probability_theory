@@ -71,6 +71,8 @@ lemma ae_eq_of_measurable' (hle : m ≤ n) (hfm : measurable[m] f)
   condition_on hle f hfi =ᵐ[μ] f :=
 ae_eq_of_ae_eq_trim (ae_eq_of_measurable hle hfm hfi)
 
+-- using `ae_eq_of_ae_eq_trim` we can obtain the ae eq on `μ`
+
 section 
 
 include hle hfi hgi
@@ -87,6 +89,26 @@ begin
       ← integral_add'],
   { exact @integrable.integrable_on _ _ m _ _ _ _ _ (integrable hle hfi) },
   { exact @integrable.integrable_on _ _ m _ _ _ _ _ (integrable hle hgi) },
+end  
+
+end
+
+section
+
+include hle hfi
+
+variable {r : ℝ}
+
+lemma smul : 
+  condition_on hle (r • f) (hfi.smul r) =ᵐ[μ.trim hle] r • condition_on hle f hfi :=
+begin
+  refine integrable.ae_eq_of_forall_set_integral_eq _ _ (integrable _ _) _ _,
+  { convert ((integrable hle hfi).smul r) /- exact is slow -/ },
+  { intros s hs _,
+    erw [condition_on_spec hle _ hs, integral_smul, 
+         ← condition_on_spec hle hfi hs, ← integral_smul],
+    refl,
+    apply_instance }
 end
 
 end
