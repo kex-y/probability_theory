@@ -276,6 +276,17 @@ begin
   { exact equiv_measure.right_inv μ }
 end
 
+lemma radon_nikodym_deriv_neg (s : signed_measure α) (μ : measure α) [sigma_finite μ]
+  (hs : s ≪ μ.to_ennreal_vector_measure) : 
+  (-s).radon_nikodym_deriv μ =ᵐ[μ] - s.radon_nikodym_deriv μ :=
+begin
+  refine ae_eq_of_with_density_signed_measure_eq 
+    (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _).neg _,
+  rw [with_density_signed_measure_neg (integrable_radon_nikodym_deriv _ _), 
+      with_density_radon_nikodym_deriv_eq _ _ hs, 
+      with_density_radon_nikodym_deriv_eq _ _ hs.neg_left]
+end
+
 lemma radon_nikodym_deriv_add (s t : signed_measure α) (μ : measure α) [sigma_finite μ] 
   (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
   (s + t).radon_nikodym_deriv μ =ᵐ[μ] s.radon_nikodym_deriv μ + t.radon_nikodym_deriv μ :=
@@ -287,6 +298,30 @@ begin
       with_density_signed_measure_add 
         (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _), 
       with_density_radon_nikodym_deriv_eq s μ hs, with_density_radon_nikodym_deriv_eq t μ ht]
+end
+
+lemma radon_nikodym_deriv_sub (s t : signed_measure α) (μ : measure α) [sigma_finite μ] 
+  (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
+  (s - t).radon_nikodym_deriv μ =ᵐ[μ] s.radon_nikodym_deriv μ - t.radon_nikodym_deriv μ :=
+begin
+  refine ae_eq_of_with_density_signed_measure_eq 
+    (integrable_radon_nikodym_deriv _ _) 
+    ((integrable_radon_nikodym_deriv _ _).sub (integrable_radon_nikodym_deriv _ _)) _,
+  rw [with_density_radon_nikodym_deriv_eq _ _ (hs.sub ht), 
+      with_density_signed_measure_sub
+        (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _), 
+      with_density_radon_nikodym_deriv_eq s μ hs, with_density_radon_nikodym_deriv_eq t μ ht]
+end
+
+lemma radon_nikodym_deriv_smul (s : signed_measure α) (μ : measure α) [sigma_finite μ]
+  (r : ℝ) (hs : s ≪ μ.to_ennreal_vector_measure) :
+  (r • s).radon_nikodym_deriv μ =ᵐ[μ] r • s.radon_nikodym_deriv μ :=
+begin
+  refine ae_eq_of_with_density_signed_measure_eq 
+    (integrable_radon_nikodym_deriv _ _) ((integrable_radon_nikodym_deriv _ _).smul r) _,
+  rw [with_density_signed_measure_smul r (integrable_radon_nikodym_deriv _ _), 
+      with_density_radon_nikodym_deriv_eq _ _ hs,
+      with_density_radon_nikodym_deriv_eq _ _ hs.smul],  
 end
 
 end signed_measure
