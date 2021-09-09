@@ -1,4 +1,4 @@
-(Results in the repo has been merged into [mathlib](https://github.com/leanprover-community/mathlib) and is maintained from there)
+(Results in the archive folder has been merged into [mathlib](https://github.com/leanprover-community/mathlib) and is maintained from there)
 
 # Propbability Theory
 
@@ -11,8 +11,12 @@ Other important theorems include
 - the Jordan decomposition theorem
 - the Lebesgue decomposition theorem
 
-Most results in this repo have been merged into [mathlib](https://github.com/leanprover-community/mathlib) and can be found in 
+Results in the archive folder have been merged into [mathlib](https://github.com/leanprover-community/mathlib) and can be found in 
 - [`measure_theory.measure.vector_measure`](https://github.com/leanprover-community/mathlib/blob/master/src/measure_theory/measure/vector_measure.lean)
 - [`measure_theory.decomposition.signed_hahn`](https://github.com/leanprover-community/mathlib/blob/master/src/measure_theory/decomposition/signed_hahn.lean)
 - [`measure_theory.decomposition.jordan`](https://github.com/leanprover-community/mathlib/blob/master/src/measure_theory/decomposition/jordan.lean)
 - [`measure_theory.decomposition.lebesgue`](https://github.com/leanprover-community/mathlib/blob/master/src/measure_theory/decomposition/jordan.lean)
+
+## src
+
+Currently defining conditional expectation, probability density function, and other results using Radon-Nikodym.
