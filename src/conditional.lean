@@ -91,6 +91,11 @@ begin
   { exact @integrable.integrable_on _ _ m _ _ _ _ _ (integrable hle hgi) },
 end  
 
+lemma add' : 
+  condition_on hle (f + g) (hfi.add hgi) =ᵐ[μ] 
+  condition_on hle f hfi + condition_on hle g hgi :=
+ae_eq_of_ae_eq_trim (add hle hfi hgi)
+
 end
 
 section
@@ -111,7 +116,13 @@ begin
     apply_instance }
 end
 
+lemma smul' : 
+  condition_on hle (r • f) (hfi.smul r) =ᵐ[μ] r • condition_on hle f hfi :=
+ae_eq_of_ae_eq_trim (smul hle hfi)
+
 end
+
+-- maybe add `neg` and `sub` also
 
 end condition_on
 
