@@ -20,11 +20,6 @@ namespace measure_theory
 
 include m
 
-lemma vector_measure.absolutely_continuous.zero {M N : Type*}
-  [add_comm_monoid M] [topological_space M] [add_comm_monoid N] [topological_space N]
-  (v : vector_measure α N) : (0 : vector_measure α M) ≪ v :=
-λ s _, vector_measure.zero_apply s
-
 namespace measure
 
 open topological_space
@@ -281,14 +276,6 @@ begin
   { exact equiv_measure.right_inv μ }
 end
 
--- more general version in PR
-lemma absolutely_continuous.add {s t : signed_measure α} {μ : measure α}
-  (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
-  s + t ≪ μ.to_ennreal_vector_measure := 
-begin
-  sorry
-end
-
 lemma radon_nikodym_deriv_add (s t : signed_measure α) (μ : measure α) [sigma_finite μ] 
   (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
   (s + t).radon_nikodym_deriv μ =ᵐ[μ] s.radon_nikodym_deriv μ + t.radon_nikodym_deriv μ :=
@@ -296,7 +283,7 @@ begin
   refine ae_eq_of_with_density_signed_measure_eq 
     (integrable_radon_nikodym_deriv _ _) 
     ((integrable_radon_nikodym_deriv _ _).add (integrable_radon_nikodym_deriv _ _)) _,
-  rw [with_density_radon_nikodym_deriv_eq _ _ (absolutely_continuous.add hs ht), 
+  rw [with_density_radon_nikodym_deriv_eq _ _ (hs.add ht), 
       with_density_signed_measure_add 
         (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _), 
       with_density_radon_nikodym_deriv_eq s μ hs, with_density_radon_nikodym_deriv_eq t μ ht]
