@@ -25,14 +25,15 @@ variables {E : Type*} [normed_group E] [measurable_space E] [second_countable_to
   [normed_space ℝ E] [complete_space E] [borel_space E] 
 
 class has_pdf (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) : Prop := 
-(pdf : ∃ f : E → ℝ≥0∞, map X ℙ = μ.with_density f)
+(pdf' : ∃ f : E → ℝ≥0∞, map X ℙ = μ.with_density f)
 
+-- remove `has_pdf` requirement and define it as a ite statement 
 def pdf (X : α → E) (ℙ : measure α) (μ : measure E) [hX : has_pdf X ℙ μ] : E → ℝ≥0∞ := 
-classical.some hX.pdf
+classical.some hX.pdf'
 
 lemma pdf_spec {X : α → E} (ℙ : measure α) (μ : measure E) [hX : has_pdf X ℙ μ] :
   measure.map X ℙ = μ.with_density (pdf X ℙ μ) :=
-classical.some_spec hX.pdf
+classical.some_spec hX.pdf'
 
 lemma pdf_spec' {X : α → E} (ℙ : measure α) (μ : measure E) 
   [hX : has_pdf X ℙ μ] {s : set E} (hs : measurable_set s) :
@@ -76,7 +77,24 @@ begin
     rwa with_density_radon_nikodym_deriv_eq }
 end
 
+lemma lintegral_mul_eq_integral [has_pdf X ℙ volume] : 
+  ∫ x, x * (pdf X ℙ volume x).to_real ∂(volume : measure ℝ) = ∫ x, X x ∂ℙ :=
+begin
+  -- we need change of variable (measure-theoretic)
+  sorry
+end
+
 end real
+
+section uniform
+
+class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) (s : set E) 
+  extends has_pdf X ℙ μ :=
+(uniform : pdf X ℙ μ =ᵐ[μ] s.indicator ((μ s)⁻¹ • 1))
+
+variables {X : α → E} {s : set E} [uniform X ℙ μ s]
+
+end uniform
 
 end pdf
 
