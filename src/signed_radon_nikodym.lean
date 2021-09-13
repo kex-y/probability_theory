@@ -1,6 +1,5 @@
 import measure_theory.decomposition.radon_nikodym
-import measure_theory.integral.set_integral
-import measure_theory.function.ae_eq_of_integral
+import measure_theory.measure.with_density_vector_measure
 
 noncomputable theory
 open_locale classical measure_theory nnreal ennreal
@@ -20,128 +19,130 @@ namespace measure_theory
 
 include m
 
-namespace measure
+open signed_measure
 
-open topological_space
+-- namespace measure -- In mathlib as measure.with_densityᵥ
 
-section with_density_signed_measure
+-- open topological_space
 
-/- Show s ↦ ∫ x in s, f x ∂μ form a signed measure. -/
+-- section with_density_signed_measure
 
-variables {μ ν : measure α} {f g : α → ℝ}
+-- /- Show s ↦ ∫ x in s, f x ∂μ form a signed measure. -/
 
-lemma is_finite_measure_of_real_of_integrable (hf : has_finite_integral f μ) :
-  is_finite_measure (μ.with_density (λ x, ennreal.of_real (f x))) :=
-is_finite_measure_with_density 
-  (lt_of_le_of_lt (lintegral_mono (λ x, ennreal.of_real_le_norm (f x))) hf)
+-- variables {μ ν : measure α} {f g : α → ℝ}
 
-/-- Given a measure `μ` and a integrable function `f`, `μ.with_density_signed_measure f` is 
-the signed measure which maps the set `s` to `∫ₛ f⁺ ∂μ - ∫ₛ f⁻ ∂μ`. -/
-def with_density_signed_measure {m : measurable_space α} 
-  (μ : measure α) (f : α → ℝ) : signed_measure α :=
-if hf : has_finite_integral f μ then
-  @to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (f x)))
-  (is_finite_measure_of_real_of_integrable hf)
-  -
-  @to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (-f x)))
-  (is_finite_measure_of_real_of_integrable (has_finite_integral_neg_iff.2 hf))
-else 0
+-- lemma is_finite_measure_of_real_of_integrable (hf : has_finite_integral f μ) :
+--   is_finite_measure (μ.with_density (λ x, ennreal.of_real (f x))) :=
+-- is_finite_measure_with_density 
+--   (lt_of_le_of_lt (lintegral_mono (λ x, ennreal.of_real_le_norm (f x))) hf)
 
-lemma with_density_signed_measure_apply (hf : integrable f μ) 
-  {i : set α} (hi : measurable_set i) : 
-  μ.with_density_signed_measure f i = ∫ x in i, f x ∂μ :=
-begin
-  rw integral_eq_lintegral_pos_part_sub_lintegral_neg_part,
-  { rw [with_density_signed_measure, dif_pos hf.2],
-    simp [if_pos hi, with_density_apply _ hi] },
-  { rw ← integrable_on_univ,
-    exact hf.integrable_on.restrict measurable_set.univ },
-end
+-- /-- Given a measure `μ` and a integrable function `f`, `μ.with_density_signed_measure f` is 
+-- the signed measure which maps the set `s` to `∫ₛ f⁺ ∂μ - ∫ₛ f⁻ ∂μ`. -/
+-- def with_density_signed_measure {m : measurable_space α} 
+--   (μ : measure α) (f : α → ℝ) : signed_measure α :=
+-- if hf : has_finite_integral f μ then
+--   @to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (f x)))
+--   (is_finite_measure_of_real_of_integrable hf)
+--   -
+--   @to_signed_measure α m (μ.with_density (λ x, ennreal.of_real (-f x)))
+--   (is_finite_measure_of_real_of_integrable (has_finite_integral_neg_iff.2 hf))
+-- else 0
 
-@[simp]
-lemma with_density_signed_measure_zero : 
-  μ.with_density_signed_measure 0 = 0 :=
-begin
-  ext1 i hi,
-  erw [with_density_signed_measure_apply (integrable_zero α ℝ μ) hi],
-  simp,
-end
+-- lemma with_density_signed_measure_apply (hf : integrable f μ) 
+--   {i : set α} (hi : measurable_set i) : 
+--   μ.with_density_signed_measure f i = ∫ x in i, f x ∂μ :=
+-- begin
+--   rw integral_eq_lintegral_pos_part_sub_lintegral_neg_part,
+--   { rw [with_density_signed_measure, dif_pos hf.2],
+--     simp [if_pos hi, with_density_apply _ hi] },
+--   { rw ← integrable_on_univ,
+--     exact hf.integrable_on.restrict measurable_set.univ },
+-- end
 
-@[simp]
-lemma with_density_signed_measure_neg (hf : integrable f μ) : 
-  μ.with_density_signed_measure (-f) = -μ.with_density_signed_measure f :=
-begin
-  ext1 i hi,
-  rw [vector_measure.neg_apply, with_density_signed_measure_apply hf hi, 
-      ← integral_neg, with_density_signed_measure_apply hf.neg hi],
-  refl
-end
+-- @[simp]
+-- lemma with_density_signed_measure_zero : 
+--   μ.with_density_signed_measure 0 = 0 :=
+-- begin
+--   ext1 i hi,
+--   erw [with_density_signed_measure_apply (integrable_zero α ℝ μ) hi],
+--   simp,
+-- end
 
-@[simp]
-lemma with_density_signed_measure_add (hf : integrable f μ) (hg : integrable g μ) :
-  μ.with_density_signed_measure (f + g) = 
-  μ.with_density_signed_measure f + μ.with_density_signed_measure g :=
-begin
-  ext1 i hi,
-  rw [with_density_signed_measure_apply (hf.add hg) hi, vector_measure.add_apply, 
-      with_density_signed_measure_apply hf hi, with_density_signed_measure_apply hg hi],
-  simp_rw [pi.add_apply],
-  rw integral_add; rw ← integrable_on_univ,
-  { exact hf.integrable_on.restrict measurable_set.univ },
-  { exact hg.integrable_on.restrict measurable_set.univ }
-end
+-- @[simp]
+-- lemma with_density_signed_measure_neg (hf : integrable f μ) : 
+--   μ.with_density_signed_measure (-f) = -μ.with_density_signed_measure f :=
+-- begin
+--   ext1 i hi,
+--   rw [vector_measure.neg_apply, with_density_signed_measure_apply hf hi, 
+--       ← integral_neg, with_density_signed_measure_apply hf.neg hi],
+--   refl
+-- end
 
-@[simp]
-lemma with_density_signed_measure_sub (hf : integrable f μ) (hg : integrable g μ) :
-  μ.with_density_signed_measure (f - g) = 
-  μ.with_density_signed_measure f - μ.with_density_signed_measure g :=
-by rw [sub_eq_add_neg, sub_eq_add_neg, with_density_signed_measure_add hf hg.neg, 
-       with_density_signed_measure_neg hg]
+-- @[simp]
+-- lemma with_density_signed_measure_add (hf : integrable f μ) (hg : integrable g μ) :
+--   μ.with_density_signed_measure (f + g) = 
+--   μ.with_density_signed_measure f + μ.with_density_signed_measure g :=
+-- begin
+--   ext1 i hi,
+--   rw [with_density_signed_measure_apply (hf.add hg) hi, vector_measure.add_apply, 
+--       with_density_signed_measure_apply hf hi, with_density_signed_measure_apply hg hi],
+--   simp_rw [pi.add_apply],
+--   rw integral_add; rw ← integrable_on_univ,
+--   { exact hf.integrable_on.restrict measurable_set.univ },
+--   { exact hg.integrable_on.restrict measurable_set.univ }
+-- end
 
-@[simp]
-lemma with_density_signed_measure_smul (r : ℝ) (hf : integrable f μ) :
-  μ.with_density_signed_measure (r • f) = r • μ.with_density_signed_measure f :=
-begin
-  ext1 i hi,
-  rw [with_density_signed_measure_apply (hf.smul r) hi, vector_measure.smul_apply, 
-      with_density_signed_measure_apply hf hi, ← integral_smul],
-  refl
-end
+-- @[simp]
+-- lemma with_density_signed_measure_sub (hf : integrable f μ) (hg : integrable g μ) :
+--   μ.with_density_signed_measure (f - g) = 
+--   μ.with_density_signed_measure f - μ.with_density_signed_measure g :=
+-- by rw [sub_eq_add_neg, sub_eq_add_neg, with_density_signed_measure_add hf hg.neg, 
+--        with_density_signed_measure_neg hg]
 
-lemma with_density_signed_measure_absolutely_continuous 
-  (μ : measure α) (f : α → ℝ) : 
-  μ.with_density_signed_measure f ≪ μ.to_ennreal_vector_measure :=
-begin
-  by_cases hf : has_finite_integral f μ,
-  { refine vector_measure.absolutely_continuous.mk (λ i hi₁ hi₂, _),
-    rw to_ennreal_vector_measure_apply_measurable hi₁ at hi₂,
-    rw [with_density_signed_measure, dif_pos hf, vector_measure.sub_apply, 
-        to_signed_measure_apply_measurable hi₁, to_signed_measure_apply_measurable hi₁,
-        with_density_apply _ hi₁, with_density_apply _ hi₁, 
-        lintegral_in_measure_zero _ _ hi₂, lintegral_in_measure_zero _ _ hi₂, 
-        ennreal.zero_to_real, sub_zero] },
-  { rw [with_density_signed_measure, dif_neg hf],
-    exact vector_measure.absolutely_continuous.zero _ }
-end
+-- @[simp]
+-- lemma with_density_signed_measure_smul (r : ℝ) (hf : integrable f μ) :
+--   μ.with_density_signed_measure (r • f) = r • μ.with_density_signed_measure f :=
+-- begin
+--   ext1 i hi,
+--   rw [with_density_signed_measure_apply (hf.smul r) hi, vector_measure.smul_apply, 
+--       with_density_signed_measure_apply hf hi, ← integral_smul],
+--   refl
+-- end
 
-end with_density_signed_measure
+-- lemma with_density_signed_measure_absolutely_continuous 
+--   (μ : measure α) (f : α → ℝ) : 
+--   μ.with_density_signed_measure f ≪ μ.to_ennreal_vector_measure :=
+-- begin
+--   by_cases hf : has_finite_integral f μ,
+--   { refine vector_measure.absolutely_continuous.mk (λ i hi₁ hi₂, _),
+--     rw to_ennreal_vector_measure_apply_measurable hi₁ at hi₂,
+--     rw [with_density_signed_measure, dif_pos hf, vector_measure.sub_apply, 
+--         to_signed_measure_apply_measurable hi₁, to_signed_measure_apply_measurable hi₁,
+--         with_density_apply _ hi₁, with_density_apply _ hi₁, 
+--         lintegral_in_measure_zero _ _ hi₂, lintegral_in_measure_zero _ _ hi₂, 
+--         ennreal.zero_to_real, sub_zero] },
+--   { rw [with_density_signed_measure, dif_neg hf],
+--     exact vector_measure.absolutely_continuous.zero _ }
+-- end
 
-section
+-- end with_density_signed_measure
 
-variables {μ : measure α} {f g : α → ℝ}
+-- section
 
-/-- Having the same density implies the underlying functions are equal almost everywhere. -/
-lemma ae_eq_of_with_density_signed_measure_eq (hf : integrable f μ) (hg : integrable g μ) 
-  (hfg : μ.with_density_signed_measure f = μ.with_density_signed_measure g) :
-  f =ᵐ[μ] g :=
-begin
-  refine integrable.ae_eq_of_forall_set_integral_eq f g hf hg (λ i hi _, _),
-  rw [← with_density_signed_measure_apply hf hi, hfg, with_density_signed_measure_apply hg hi]
-end
+-- variables {μ : measure α} {f g : α → ℝ}
 
-end
+-- /-- Having the same density implies the underlying functions are equal almost everywhere. -/
+-- lemma ae_eq_of_with_density_signed_measure_eq (hf : integrable f μ) (hg : integrable g μ) 
+--   (hfg : μ.with_density_signed_measure f = μ.with_density_signed_measure g) :
+--   f =ᵐ[μ] g :=
+-- begin
+--   refine integrable.ae_eq_of_forall_set_integral_eq f g hf hg (λ i hi _, _),
+--   rw [← with_density_signed_measure_apply hf hi, hfg, with_density_signed_measure_apply hg hi]
+-- end
 
-end measure
+-- end
+
+-- end measure
 
 namespace signed_measure
 
@@ -255,12 +256,12 @@ end
 lemma with_density_radon_nikodym_deriv_eq
   (s : signed_measure α) (μ : measure α) [sigma_finite μ] 
   (h : s ≪ μ.to_ennreal_vector_measure) :
-  μ.with_density_signed_measure (s.radon_nikodym_deriv μ) = s :=
+  μ.with_densityᵥ (s.radon_nikodym_deriv μ) = s :=
 begin
-  rw [absolutely_continuous_iff, (_ : μ.to_ennreal_vector_measure.ennreal_to_measure = μ), 
+  rw [absolutely_continuous_ennreal_iff, (_ : μ.to_ennreal_vector_measure.ennreal_to_measure = μ), 
       total_variation_absolutely_continuous_iff] at h,
   { ext1 i hi,
-    rw [with_density_signed_measure_apply (integrable_radon_nikodym_deriv _ _) hi, 
+    rw [with_densityᵥ_apply (integrable_radon_nikodym_deriv _ _) hi, 
         radon_nikodym_deriv, integral_sub, 
         with_density_radon_nikodym_deriv_to_real_eq h.1 hi, 
         with_density_radon_nikodym_deriv_to_real_eq h.2 hi],
@@ -280,10 +281,9 @@ lemma radon_nikodym_deriv_neg (s : signed_measure α) (μ : measure α) [sigma_f
   (hs : s ≪ μ.to_ennreal_vector_measure) : 
   (-s).radon_nikodym_deriv μ =ᵐ[μ] - s.radon_nikodym_deriv μ :=
 begin
-  refine ae_eq_of_with_density_signed_measure_eq 
-    (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _).neg _,
-  rw [with_density_signed_measure_neg (integrable_radon_nikodym_deriv _ _), 
-      with_density_radon_nikodym_deriv_eq _ _ hs, 
+  refine (integrable_radon_nikodym_deriv _ _).ae_eq_of_with_densityᵥ_eq 
+    (integrable_radon_nikodym_deriv _ _).neg _,
+  rw [with_densityᵥ_neg, with_density_radon_nikodym_deriv_eq _ _ hs, 
       with_density_radon_nikodym_deriv_eq _ _ hs.neg_left]
 end
 
@@ -291,11 +291,10 @@ lemma radon_nikodym_deriv_add (s t : signed_measure α) (μ : measure α) [sigma
   (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
   (s + t).radon_nikodym_deriv μ =ᵐ[μ] s.radon_nikodym_deriv μ + t.radon_nikodym_deriv μ :=
 begin
-  refine ae_eq_of_with_density_signed_measure_eq 
-    (integrable_radon_nikodym_deriv _ _) 
+  refine (integrable_radon_nikodym_deriv _ _).ae_eq_of_with_densityᵥ_eq
     ((integrable_radon_nikodym_deriv _ _).add (integrable_radon_nikodym_deriv _ _)) _,
   rw [with_density_radon_nikodym_deriv_eq _ _ (hs.add ht), 
-      with_density_signed_measure_add 
+      with_densityᵥ_add 
         (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _), 
       with_density_radon_nikodym_deriv_eq s μ hs, with_density_radon_nikodym_deriv_eq t μ ht]
 end
@@ -304,11 +303,10 @@ lemma radon_nikodym_deriv_sub (s t : signed_measure α) (μ : measure α) [sigma
   (hs : s ≪ μ.to_ennreal_vector_measure) (ht : t ≪ μ.to_ennreal_vector_measure) :
   (s - t).radon_nikodym_deriv μ =ᵐ[μ] s.radon_nikodym_deriv μ - t.radon_nikodym_deriv μ :=
 begin
-  refine ae_eq_of_with_density_signed_measure_eq 
-    (integrable_radon_nikodym_deriv _ _) 
+  refine (integrable_radon_nikodym_deriv _ _).ae_eq_of_with_densityᵥ_eq 
     ((integrable_radon_nikodym_deriv _ _).sub (integrable_radon_nikodym_deriv _ _)) _,
   rw [with_density_radon_nikodym_deriv_eq _ _ (hs.sub ht), 
-      with_density_signed_measure_sub
+      with_densityᵥ_sub
         (integrable_radon_nikodym_deriv _ _) (integrable_radon_nikodym_deriv _ _), 
       with_density_radon_nikodym_deriv_eq s μ hs, with_density_radon_nikodym_deriv_eq t μ ht]
 end
@@ -317,13 +315,12 @@ lemma radon_nikodym_deriv_smul (s : signed_measure α) (μ : measure α) [sigma_
   (r : ℝ) (hs : s ≪ μ.to_ennreal_vector_measure) :
   (r • s).radon_nikodym_deriv μ =ᵐ[μ] r • s.radon_nikodym_deriv μ :=
 begin
-  refine ae_eq_of_with_density_signed_measure_eq 
+  refine integrable.ae_eq_of_with_densityᵥ_eq
     (integrable_radon_nikodym_deriv _ _) ((integrable_radon_nikodym_deriv _ _).smul r) _,
-  rw [with_density_signed_measure_smul r (integrable_radon_nikodym_deriv _ _), 
+  rw [@with_densityᵥ_smul _ _ μ _ _ _ _ _ _ _ (s.radon_nikodym_deriv μ) _ _ _ _ _ _ r,
       with_density_radon_nikodym_deriv_eq _ _ hs,
-      with_density_radon_nikodym_deriv_eq _ _ hs.smul],  
+      with_density_radon_nikodym_deriv_eq _ _ hs.smul],
 end
-
 end signed_measure
 
 end measure_theory
