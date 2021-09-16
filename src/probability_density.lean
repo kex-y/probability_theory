@@ -112,41 +112,41 @@ begin
     rwa with_density_radon_nikodym_deriv_eq }
 end
 
-/-- If `X` is a random variable that has pdf `f`, then the expectation of `X` equals 
-`∫ x, x * f x ∂λ` where `λ` is the Lebesgue measure. -/
-lemma lintegral_mul_eq_integral [has_pdf X ℙ volume] 
-  (hpdf : integrable (λ x, x * (pdf X ℙ volume x).to_real) volume) /- finite expectation -/ : 
-  ∫ x, x * (pdf X ℙ volume x).to_real ∂(volume : measure ℝ) = ∫ x, X x ∂ℙ :=
+/-- **The Law of the Unconscious Statistician**: Given a random variable `X` and a measurable 
+function `f`, we have `f ∘ X` is a random variable and have expectation `∫ x, f x * pdf X ∂λ` 
+where `λ` is the Lebesgue measure. -/
+lemma lintegral_mul_eq_integral' [has_pdf X ℙ volume] {f : ℝ → ℝ} (hf : measurable f)
+  (hpdf : integrable (λ x, f x * (pdf X ℙ volume x).to_real) volume) : 
+  ∫ x, f x * (pdf X ℙ volume x).to_real ∂(volume : measure ℝ) = ∫ x, f (X x) ∂ℙ :=
 begin
-  change _ = ∫ x, id (X x) ∂ℙ,
-  rw [← integral_map hX ae_measurable_id, pdf_spec X ℙ volume, 
+  rw [← integral_map hX hf.ae_measurable, pdf_spec X ℙ volume, 
       integral_eq_lintegral_pos_part_sub_lintegral_neg_part,
       integral_eq_lintegral_pos_part_sub_lintegral_neg_part,
       lintegral_with_density_eq_lintegral_mul, lintegral_with_density_eq_lintegral_mul],
   { congr' 2,
-    { have : ∀ x, ennreal.of_real (x * (pdf X ℙ volume x).to_real) = 
-        ennreal.of_real (pdf X ℙ volume x).to_real * ennreal.of_real x,
+    { have : ∀ x, ennreal.of_real (f x * (pdf X ℙ volume x).to_real) = 
+        ennreal.of_real (pdf X ℙ volume x).to_real * ennreal.of_real (f x),
       { intro x, 
         rw [mul_comm, ennreal.of_real_mul ennreal.to_real_nonneg] },
       simp_rw [this],
       exact lintegral_congr_ae (filter.eventually_eq.mul 
         (of_real_to_real_ae_eq hX) (ae_eq_refl _)) },
-    { have : ∀ x, ennreal.of_real (- (x * (pdf X ℙ volume x).to_real)) = 
-        ennreal.of_real (pdf X ℙ volume x).to_real * ennreal.of_real (-x),
+    { have : ∀ x, ennreal.of_real (- (f x * (pdf X ℙ volume x).to_real)) = 
+        ennreal.of_real (pdf X ℙ volume x).to_real * ennreal.of_real (-f x),
       { intro x,
         rw [neg_mul_eq_neg_mul, mul_comm, ennreal.of_real_mul ennreal.to_real_nonneg] },
       simp_rw [this],
       exact lintegral_congr_ae (filter.eventually_eq.mul 
         (of_real_to_real_ae_eq hX) (ae_eq_refl _)) } },
+  { exact measurable_pdf X ℙ volume },
+  { exact (measurable.neg hf).ennreal_of_real },
   { exact measurable_pdf X ℙ volume},
-  { exact measurable_id.neg.ennreal_of_real},
-  { exact measurable_pdf X ℙ volume},
-  { exact measurable_id.ennreal_of_real },
-  { refine ⟨ae_measurable_id, _⟩,
+  { exact measurable.ennreal_of_real hf },
+  { refine ⟨hf.ae_measurable, _⟩,
     rw [has_finite_integral, lintegral_with_density_eq_lintegral_mul _ 
-          (measurable_pdf _ _ _) measurable_id.nnnorm.coe_nnreal_ennreal],
-    have : (λ x, (pdf X ℙ volume * λ x, ↑∥id x∥₊) x) =ᵐ[volume] 
-      (λ x, ∥x * (pdf X ℙ volume x).to_real∥₊),
+          (measurable_pdf _ _ _) hf.nnnorm.coe_nnreal_ennreal],
+    have : (λ x, (pdf X ℙ volume * λ x, ↑∥f x∥₊) x) =ᵐ[volume] 
+      (λ x, ∥f x * (pdf X ℙ volume x).to_real∥₊),
     { simp_rw [← smul_eq_mul, nnnorm_smul, ennreal.coe_mul],
       rw [smul_eq_mul, mul_comm],
       refine filter.eventually_eq.mul (ae_eq_refl _) 
@@ -155,22 +155,52 @@ begin
       ext1 x,
       exact real.ennnorm_eq_of_real ennreal.to_real_nonneg },
     rw lintegral_congr_ae this,
-    exact hpdf.2, 
-    apply_instance },
-  { assumption }
+    exact hpdf.2 },
+  { assumption },
 end
+
+/-- If `X` is a random variable that has pdf `f`, then the expectation of `X` equals 
+`∫ x, x * f x ∂λ` where `λ` is the Lebesgue measure. -/
+lemma lintegral_mul_eq_integral [has_pdf X ℙ volume] 
+  (hpdf : integrable (λ x, x * (pdf X ℙ volume x).to_real) volume) /- finite expectation -/ : 
+  ∫ x, x * (pdf X ℙ volume x).to_real ∂(volume : measure ℝ) = ∫ x, X x ∂ℙ :=
+lintegral_mul_eq_integral' hX measurable_id hpdf
 
 end real
 
-section uniform
+section
 
-class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) (s : set E) 
+/-! **Uniform Distribution** -/
+
+class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)  
   extends has_pdf X ℙ μ :=
-(uniform : pdf X ℙ μ =ᵐ[μ] s.indicator ((μ s)⁻¹ • 1))
+(support' : set E) (measurable' : measurable_set support')
+(uniform' : pdf X ℙ μ =ᵐ[μ] support'.indicator ((μ support')⁻¹ • 1))
 
-variables {X : α → E} {s : set E} [uniform X ℙ μ s]
+namespace uniform
+
+def support (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) 
+  [hX : uniform X ℙ μ] : set E := 
+hX.support'
+
+@[measurability]
+lemma measurable_set_support  (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) 
+  [hX : uniform X ℙ μ] : measurable_set (support X ℙ μ) := 
+hX.measurable'
+
+lemma pdf_ae_eq (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) 
+  [hX : uniform X ℙ μ] : 
+  pdf X ℙ μ =ᵐ[μ] (support X ℙ μ).indicator ((μ (support X ℙ μ))⁻¹ • 1) := 
+hX.uniform'
+
+variables {X : α → E} [uniform X ℙ μ] 
+
+-- lemma uniform_integrable : 
+--   integrable (λ x : ℝ, x * (pdf X ℙ μ x).to_real) (volume : measure ℝ) :=
 
 end uniform
+
+end
 
 end pdf
 
