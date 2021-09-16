@@ -166,6 +166,22 @@ lemma lintegral_mul_eq_integral [has_pdf X ℙ volume]
   ∫ x, x * (pdf X ℙ volume x).to_real ∂(volume : measure ℝ) = ∫ x, X x ∂ℙ :=
 lintegral_mul_eq_integral' hX measurable_id hpdf
 
+lemma has_finite_integral_mul [has_pdf X ℙ volume] {f : ℝ → ℝ} (hf : measurable f)
+  {g : ℝ → ℝ≥0∞} (hg : pdf X ℙ volume =ᵐ[volume] g) (hgi : ∫⁻ x, ∥f x∥₊ * g x ∂(volume) < ∞) : 
+  has_finite_integral (λ x, f x * (pdf X ℙ volume x).to_real) volume :=
+begin
+  rw [has_finite_integral],
+  have : (λ x, ↑∥f x∥₊ * g x) =ᵐ[volume] (λ x, ∥f x * (pdf X ℙ volume x).to_real∥₊),
+  { refine ae_eq_trans (filter.eventually_eq.mul (ae_eq_refl (λ x, ∥f x∥₊)) 
+      (ae_eq_trans hg.symm (of_real_to_real_ae_eq hX).symm)) _,
+    simp_rw [← smul_eq_mul, nnnorm_smul, ennreal.coe_mul, smul_eq_mul],
+    refine filter.eventually_eq.mul (ae_eq_refl _) _,
+    convert ae_eq_refl _,
+    ext1 x,
+    exact real.ennnorm_eq_of_real ennreal.to_real_nonneg },
+  rwa ← lintegral_congr_ae this,
+end
+
 end real
 
 section
@@ -175,6 +191,8 @@ section
 class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)  
   extends has_pdf X ℙ μ :=
 (support' : set E) (measurable' : measurable_set support')
+(finite_support' : μ support' < ∞)
+(support_not_null' : 0 < μ support')
 (uniform' : pdf X ℙ μ =ᵐ[μ] support'.indicator ((μ support')⁻¹ • 1))
 
 namespace uniform
@@ -188,15 +206,44 @@ lemma measurable_set_support  (X : α → E) (ℙ : measure α . volume_tac) (μ
   [hX : uniform X ℙ μ] : measurable_set (support X ℙ μ) := 
 hX.measurable'
 
+lemma finite_support (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)
+  [hX : uniform X ℙ μ] : μ (support X ℙ μ) < ∞ := 
+hX.finite_support'
+
+lemma support_not_null (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)
+  [hX : uniform X ℙ μ] : 0 < μ (support X ℙ μ) := 
+hX.support_not_null'
+
 lemma pdf_ae_eq (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) 
   [hX : uniform X ℙ μ] : 
   pdf X ℙ μ =ᵐ[μ] (support X ℙ μ).indicator ((μ (support X ℙ μ))⁻¹ • 1) := 
 hX.uniform'
 
-variables {X : α → E} [uniform X ℙ μ] 
+variables [is_finite_measure ℙ] {X : α → ℝ} [uniform X ℙ volume] 
 
--- lemma uniform_integrable : 
---   integrable (λ x : ℝ, x * (pdf X ℙ μ x).to_real) (volume : measure ℝ) :=
+-- Is this true? 
+lemma set_lintegral_nnnorm_lt_top {s : set E} (hs : μ s < ∞) : 
+  ∫⁻ x in s, ∥x∥₊ ∂μ < ∞ :=
+begin
+  sorry
+end
+
+lemma mul_pdf_integrable (hX : measurable X) : 
+  integrable (λ x : ℝ, x * (pdf X ℙ volume x).to_real) volume :=
+begin
+  refine ⟨ae_measurable_id'.mul (measurable_pdf X ℙ volume).ae_measurable.ennreal_to_real, _⟩,
+  refine has_finite_integral_mul hX measurable_id (pdf_ae_eq X ℙ volume) _,
+  set ind := (volume (support X ℙ volume))⁻¹ • (1 : ℝ → ℝ≥0∞) with hind,
+  have : ∀ x, ↑∥x∥₊ * (support X ℙ volume).indicator ind x = 
+    (support X ℙ volume).indicator (λ x, ∥x∥₊ * ind x) x := 
+      λ x, ((support X ℙ volume).indicator_mul_right (λ x, ↑∥x∥₊) ind).symm,
+  simp only [this, lintegral_indicator _ (measurable_set_support X ℙ volume), hind, mul_one, 
+             algebra.id.smul_eq_mul, pi.one_apply, pi.smul_apply],
+  rw lintegral_mul_const _ measurable_nnnorm.coe_nnreal_ennreal,
+  { exact ennreal.mul_lt_top (set_lintegral_nnnorm_lt_top (finite_support X ℙ volume)) 
+      (ennreal.inv_lt_top.2 (support_not_null X ℙ volume)) },
+  { apply_instance }
+end
 
 end uniform
 
