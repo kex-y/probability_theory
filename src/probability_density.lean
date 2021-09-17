@@ -188,10 +188,21 @@ section
 
 /-! **Uniform Distribution** -/
 
+/-
+Problem with the following definition: 
+- does it have finite expectation?
+
+  class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)  
+    extends has_pdf X ℙ μ :=
+  (support' : set E) (measurable' : measurable_set support')
+  (finite_support' : μ support' < ∞)
+  (support_not_null' : 0 < μ support')
+  (uniform' : pdf X ℙ μ =ᵐ[μ] support'.indicator ((μ support')⁻¹ • 1))
+-/
+
 class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)  
   extends has_pdf X ℙ μ :=
-(support' : set E) (measurable' : measurable_set support')
-(finite_support' : μ support' < ∞)
+(support' : set E) (compact_support' : is_compact support')
 (support_not_null' : 0 < μ support')
 (uniform' : pdf X ℙ μ =ᵐ[μ] support'.indicator ((μ support')⁻¹ • 1))
 
@@ -201,14 +212,14 @@ def support (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . vol
   [hX : uniform X ℙ μ] : set E := 
 hX.support'
 
+lemma is_compact_support (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) 
+  [hX : uniform X ℙ μ] : is_compact (support X ℙ μ) :=
+hX.compact_support'
+
 @[measurability]
 lemma measurable_set_support  (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) 
   [hX : uniform X ℙ μ] : measurable_set (support X ℙ μ) := 
-hX.measurable'
-
-lemma finite_support (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)
-  [hX : uniform X ℙ μ] : μ (support X ℙ μ) < ∞ := 
-hX.finite_support'
+(is_compact_support X ℙ μ).is_closed.measurable_set
 
 lemma support_not_null (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)
   [hX : uniform X ℙ μ] : 0 < μ (support X ℙ μ) := 
@@ -221,16 +232,47 @@ hX.uniform'
 
 variables [is_finite_measure ℙ] {X : α → ℝ} [uniform X ℙ volume] 
 
--- Is this true? 
-lemma set_lintegral_nnnorm_lt_top {s : set E} (hs : μ s < ∞) : 
-  ∫⁻ x in s, ∥x∥₊ ∂μ < ∞ :=
+-- Do we not have this?
+lemma set_lintegral_mono_on {μ : measure α} {s : set α} {f g : α → ℝ≥0∞}
+  (hf : measurable f) (hg : measurable g) (hfg : ∀ x ∈ s, f x ≤ g x) :
+  ∫⁻ x in s, f x ∂μ ≤ ∫⁻ x in s, g x ∂μ :=
 begin
-  sorry
+  refine lintegral_mono_ae _,
+  rw ae_restrict_iff (measurable_set_le hf hg),
+  exact ae_of_all _ hfg,
 end
 
+lemma set_lintegral_nnnorm_lt_top_of_bdd_above 
+  {s : set E} (hs : μ s < ∞) (hbdd : bdd_above ((λ x, ∥x∥₊) '' s)) : 
+  ∫⁻ x in s, ∥x∥₊ ∂μ < ∞ :=
+begin
+  obtain ⟨M, hM⟩ := hbdd,
+  rw mem_upper_bounds at hM,
+  refine lt_of_le_of_lt (set_lintegral_mono_on 
+    measurable_nnnorm.coe_nnreal_ennreal (@measurable_const _ _ _ _ ↑M) _) _,
+  { simpa using hM },
+  { rw lintegral_const,
+    refine ennreal.mul_lt_top ennreal.coe_lt_top _,
+    simp [hs] }
+end
+
+lemma set_lintegral_nnnorm_lt_top_of_is_compact 
+  {s : set E} (hs : μ s < ∞) (hsc : is_compact s): 
+  ∫⁻ x in s, ∥x∥₊ ∂μ < ∞ :=
+set_lintegral_nnnorm_lt_top_of_bdd_above hs (hsc.image continuous_nnnorm).bdd_above
+
+-- The statement is true for compact support. Is it true in general?
 lemma mul_pdf_integrable (hX : measurable X) : 
   integrable (λ x : ℝ, x * (pdf X ℙ volume x).to_real) volume :=
 begin
+  by_cases hsupp : volume (support X ℙ volume) = ∞,
+  { have : pdf X ℙ volume =ᵐ[volume] 0,
+    { refine ae_eq_trans (pdf_ae_eq X ℙ volume) _,
+      simp [hsupp] },
+    refine integrable.congr (integrable_zero _ _ _) _,
+    rw [(by simp : (λ x, 0 : ℝ → ℝ) = (λ x, x * (0 : ℝ≥0∞).to_real))],
+    refine filter.eventually_eq.mul (ae_eq_refl _) 
+      (filter.eventually_eq.fun_comp this.symm ennreal.to_real) },
   refine ⟨ae_measurable_id'.mul (measurable_pdf X ℙ volume).ae_measurable.ennreal_to_real, _⟩,
   refine has_finite_integral_mul hX measurable_id (pdf_ae_eq X ℙ volume) _,
   set ind := (volume (support X ℙ volume))⁻¹ • (1 : ℝ → ℝ≥0∞) with hind,
@@ -240,7 +282,8 @@ begin
   simp only [this, lintegral_indicator _ (measurable_set_support X ℙ volume), hind, mul_one, 
              algebra.id.smul_eq_mul, pi.one_apply, pi.smul_apply],
   rw lintegral_mul_const _ measurable_nnnorm.coe_nnreal_ennreal,
-  { exact ennreal.mul_lt_top (set_lintegral_nnnorm_lt_top (finite_support X ℙ volume)) 
+  { refine ennreal.mul_lt_top (set_lintegral_nnnorm_lt_top_of_is_compact 
+      (lt_top_iff_ne_top.2 hsupp) (is_compact_support X ℙ volume))
       (ennreal.inv_lt_top.2 (support_not_null X ℙ volume)) },
   { apply_instance }
 end
