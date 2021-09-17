@@ -200,6 +200,9 @@ Problem with the following definition:
   (uniform' : pdf X ℙ μ =ᵐ[μ] support'.indicator ((μ support')⁻¹ • 1))
 -/
 
+/-- A random variable `X` has uniform distribution if it has a probability density function `f`
+with compact support `s` such that `f = (μ s)⁻¹ 1ₛ` a.e. where `1ₛ` is the indicator function 
+for `s`. -/
 class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)  
   extends has_pdf X ℙ μ :=
 (support' : set E) (compact_support' : is_compact support')
@@ -242,6 +245,7 @@ begin
   exact ae_of_all _ hfg,
 end
 
+-- generalize to following two lemmas
 lemma set_lintegral_nnnorm_lt_top_of_bdd_above 
   {s : set E} (hs : μ s < ∞) (hbdd : bdd_above ((λ x, ∥x∥₊) '' s)) : 
   ∫⁻ x in s, ∥x∥₊ ∂μ < ∞ :=
