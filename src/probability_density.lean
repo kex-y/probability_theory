@@ -248,7 +248,7 @@ begin
   exact ae_of_all _ hfg,
 end
 
--- generalize to following two lemmas
+-- generalize the following two lemmas
 lemma set_lintegral_nnnorm_lt_top_of_bdd_above 
   {s : set E} (hs : μ s < ∞) (hbdd : bdd_above ((λ x, ∥x∥₊) '' s)) : 
   ∫⁻ x in s, ∥x∥₊ ∂μ < ∞ :=
