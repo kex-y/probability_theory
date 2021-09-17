@@ -6,14 +6,21 @@ open_locale classical measure_theory nnreal ennreal
 
 section
 
-open measure_theory measure_theory.measure
+open measure_theory measure_theory.measure topological_space
 
 variables {α β : Type*} [measurable_space α] [measurable_space β] 
+variables {E : Type*} [normed_ring E] [measurable_space E] [second_countable_topology E]
+  [normed_space ℝ E] [complete_space E] [borel_space E] 
 
 -- PRed
 lemma measure_theory.measure.is_finite_measure.map (μ : measure α) [is_finite_measure μ] 
   {f : α → β} (hf : measurable f) : is_finite_measure (map f μ) :=
 ⟨by { rw [map_apply hf measurable_set.univ, set.preimage_univ], exact measure_lt_top μ _ }⟩
+
+lemma integral_mul_left_congr_ae {μ : measure α} {f g h : α → E} 
+  (hf : measurable f) (hg : measurable g) (hh : measurable h) 
+  (hgh : g =ᵐ[μ] h) : ∫ x, f x * g x ∂μ = ∫ x, f x * h x ∂μ :=
+integral_congr_ae (filter.eventually_eq.mul (ae_eq_refl _) hgh)
 
 end
 
@@ -115,9 +122,9 @@ end
 /-- **The Law of the Unconscious Statistician**: Given a random variable `X` and a measurable 
 function `f`, we have `f ∘ X` is a random variable and have expectation `∫ x, f x * pdf X ∂λ` 
 where `λ` is the Lebesgue measure. -/
-lemma lintegral_mul_eq_integral' [has_pdf X ℙ volume] {f : ℝ → ℝ} (hf : measurable f)
+lemma integral_mul_eq_integral' [has_pdf X ℙ volume] (f : ℝ → ℝ) (hf : measurable f)
   (hpdf : integrable (λ x, f x * (pdf X ℙ volume x).to_real) volume) : 
-  ∫ x, f x * (pdf X ℙ volume x).to_real ∂(volume : measure ℝ) = ∫ x, f (X x) ∂ℙ :=
+  ∫ x, f x * (pdf X ℙ volume x).to_real ∂(volume) = ∫ x, f (X x) ∂ℙ :=
 begin
   rw [← integral_map hX hf.ae_measurable, pdf_spec X ℙ volume, 
       integral_eq_lintegral_pos_part_sub_lintegral_neg_part,
@@ -161,10 +168,10 @@ end
 
 /-- If `X` is a random variable that has pdf `f`, then the expectation of `X` equals 
 `∫ x, x * f x ∂λ` where `λ` is the Lebesgue measure. -/
-lemma lintegral_mul_eq_integral [has_pdf X ℙ volume] 
+lemma integral_mul_eq_integral [has_pdf X ℙ volume] 
   (hpdf : integrable (λ x, x * (pdf X ℙ volume x).to_real) volume) /- finite expectation -/ : 
   ∫ x, x * (pdf X ℙ volume x).to_real ∂(volume : measure ℝ) = ∫ x, X x ∂ℙ :=
-lintegral_mul_eq_integral' hX measurable_id hpdf
+integral_mul_eq_integral' hX _ measurable_id hpdf
 
 lemma has_finite_integral_mul [has_pdf X ℙ volume] {f : ℝ → ℝ} (hf : measurable f)
   {g : ℝ → ℝ≥0∞} (hg : pdf X ℙ volume =ᵐ[volume] g) (hgi : ∫⁻ x, ∥f x∥₊ * g x ∂(volume) < ∞) : 
@@ -188,21 +195,11 @@ section
 
 /-! **Uniform Distribution** -/
 
-/-
-Problem with the following definition: 
-- does it have finite expectation?
-
-  class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)  
-    extends has_pdf X ℙ μ :=
-  (support' : set E) (measurable' : measurable_set support')
-  (finite_support' : μ support' < ∞)
-  (support_not_null' : 0 < μ support')
-  (uniform' : pdf X ℙ μ =ᵐ[μ] support'.indicator ((μ support')⁻¹ • 1))
--/
-
 /-- A random variable `X` has uniform distribution if it has a probability density function `f`
 with compact support `s` such that `f = (μ s)⁻¹ 1ₛ` a.e. where `1ₛ` is the indicator function 
-for `s`. -/
+for `s`. 
+
+We require compact support since otherwise the expectation might not be finite. -/
 class uniform (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac)  
   extends has_pdf X ℙ μ :=
 (support' : set E) (compact_support' : is_compact support')
@@ -232,6 +229,12 @@ lemma pdf_ae_eq (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E .
   [hX : uniform X ℙ μ] : 
   pdf X ℙ μ =ᵐ[μ] (support X ℙ μ).indicator ((μ (support X ℙ μ))⁻¹ • 1) := 
 hX.uniform'
+
+lemma pdf_to_real_ae_eq (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . volume_tac) 
+  [hX : uniform X ℙ μ] : 
+  (λ x, (pdf X ℙ μ x).to_real) =ᵐ[μ] 
+  (λ x, ((support X ℙ μ).indicator ((μ (support X ℙ μ))⁻¹ • (1 : E → ℝ≥0∞)) x).to_real) :=
+filter.eventually_eq.fun_comp (pdf_ae_eq X ℙ μ) ennreal.to_real
 
 variables [is_finite_measure ℙ] {X : α → ℝ} [uniform X ℙ volume] 
 
@@ -265,7 +268,6 @@ lemma set_lintegral_nnnorm_lt_top_of_is_compact
   ∫⁻ x in s, ∥x∥₊ ∂μ < ∞ :=
 set_lintegral_nnnorm_lt_top_of_bdd_above hs (hsc.image continuous_nnnorm).bdd_above
 
--- The statement is true for compact support. Is it true in general?
 lemma mul_pdf_integrable (hX : measurable X) : 
   integrable (λ x : ℝ, x * (pdf X ℙ volume x).to_real) volume :=
 begin
@@ -291,6 +293,29 @@ begin
       (ennreal.inv_lt_top.2 (support_not_null X ℙ volume)) },
   { apply_instance }
 end
+
+/-- A real uniform random variable `X` with support `s` has expectation 
+`(λ s)⁻¹ * ∫ x in s, x ∂λ` where `λ` is the Lebesgue measure. -/
+lemma integral_eq (hX : measurable X) : 
+  ∫ x, X x ∂ℙ = 
+  (volume (support X ℙ volume))⁻¹.to_real * ∫ x in support X ℙ volume, x ∂(volume) :=
+begin
+  rw ← integral_mul_eq_integral hX (mul_pdf_integrable hX),
+  all_goals { try { apply_instance } },
+  rw integral_congr_ae (filter.eventually_eq.mul (ae_eq_refl _) (pdf_to_real_ae_eq X ℙ volume)),
+  have : ∀ x, x * ((support X ℙ volume).indicator 
+      ((volume (support X ℙ volume))⁻¹ • (1 : ℝ → ℝ≥0∞)) x).to_real = 
+    x * ((support X ℙ volume).indicator 
+      ((volume (support X ℙ volume))⁻¹.to_real • (1 : ℝ → ℝ)) x),
+  { refine λ x, congr_arg ((*) x) _,
+    by_cases hx : x ∈ support X ℙ volume,
+    { simp [set.indicator_of_mem hx] },
+    { simp [set.indicator_of_not_mem hx] }},
+  simp_rw [this, ← (support X ℙ volume).indicator_mul_right (λ x, x), 
+           integral_indicator (measurable_set_support X ℙ volume)],
+  change ∫ x in support X ℙ volume, x * ((volume (support X ℙ volume))⁻¹.to_real • 1) ∂(volume) = _,
+  rw [integral_mul_right, mul_comm, algebra.id.smul_eq_mul, mul_one],
+end .
 
 end uniform
 
