@@ -104,6 +104,21 @@ begin
   { refine ae_of_all _ (λ x, le_of_lt (exp_pos _)) },
 end
 
+/-- Given a measure `μ`, the Laplace transform of `μ.with_density (x ↦ exp(-⟪t, x⟫))` at `s` 
+equals the Laplace transform of `μ` at `s + t`. -/
+lemma laplace_transform_with_density_add (hsupp : measurable_set support) {s t : E} :
+  (𝓛 (μ.with_density (λ x, ennreal.of_real (exp (-⟪t, x⟫)))) on support) s = 
+  (𝓛 μ on support) (s + t) :=
+begin
+  rw laplace_transform_with_density hsupp,
+  { have : ∀ x, (ennreal.of_real (exp (-⟪t, x⟫))).to_real = exp (-⟪t, x⟫),
+    { intro x, rw ennreal.to_real_of_real (le_of_lt (exp_pos _)) },
+    simp_rw [this, ← exp_add, ← neg_add, ← inner_add_left],
+    refl },
+  { measurability },
+  { exact (ae_of_all _ (λ x hx, ennreal.of_real_lt_top)) },
+end
+
 end
 
 end measure_theory
