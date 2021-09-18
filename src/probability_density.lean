@@ -17,10 +17,20 @@ lemma measure_theory.measure.is_finite_measure.map (μ : measure α) [is_finite_
   {f : α → β} (hf : measurable f) : is_finite_measure (map f μ) :=
 ⟨by { rw [map_apply hf measurable_set.univ, set.preimage_univ], exact measure_lt_top μ _ }⟩
 
-lemma integral_mul_left_congr_ae {μ : measure α} {f g h : α → E} 
+lemma measure_theory.integral_mul_left_congr_ae {μ : measure α} {f g h : α → E} 
   (hf : measurable f) (hg : measurable g) (hh : measurable h) 
   (hgh : g =ᵐ[μ] h) : ∫ x, f x * g x ∂μ = ∫ x, f x * h x ∂μ :=
 integral_congr_ae (filter.eventually_eq.mul (ae_eq_refl _) hgh)
+
+-- Do we not have this?
+lemma measure_theory.set_lintegral_mono_on {μ : measure α} {s : set α} {f g : α → ℝ≥0∞}
+  (hf : measurable f) (hg : measurable g) (hfg : ∀ x ∈ s, f x ≤ g x) :
+  ∫⁻ x in s, f x ∂μ ≤ ∫⁻ x in s, g x ∂μ :=
+begin
+  refine lintegral_mono_ae _,
+  rw ae_restrict_iff (measurable_set_le hf hg),
+  exact ae_of_all _ hfg,
+end
 
 end
 
@@ -250,16 +260,6 @@ lemma pdf_to_real_ae_eq (X : α → E) (ℙ : measure α . volume_tac) (μ : mea
 filter.eventually_eq.fun_comp (pdf_ae_eq X ℙ μ) ennreal.to_real
 
 variables [is_finite_measure ℙ] {X : α → ℝ} [uniform X ℙ volume] 
-
--- Do we not have this?
-lemma set_lintegral_mono_on {μ : measure α} {s : set α} {f g : α → ℝ≥0∞}
-  (hf : measurable f) (hg : measurable g) (hfg : ∀ x ∈ s, f x ≤ g x) :
-  ∫⁻ x in s, f x ∂μ ≤ ∫⁻ x in s, g x ∂μ :=
-begin
-  refine lintegral_mono_ae _,
-  rw ae_restrict_iff (measurable_set_le hf hg),
-  exact ae_of_all _ hfg,
-end
 
 -- generalize the following two lemmas
 lemma set_lintegral_nnnorm_lt_top_of_bdd_above 
