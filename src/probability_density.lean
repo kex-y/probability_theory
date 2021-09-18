@@ -36,17 +36,26 @@ class has_pdf (X : α → E) (ℙ : measure α . volume_tac) (μ : measure E . v
 (pdf' : ∃ (f : E → ℝ≥0∞), measurable f ∧ map X ℙ = μ.with_density f)
 
 -- remove `has_pdf` requirement and define it as a ite statement 
-def pdf (X : α → E) (ℙ : measure α) (μ : measure E) [hX : has_pdf X ℙ μ] : E → ℝ≥0∞ := 
-classical.some hX.pdf'
+def pdf (X : α → E) (ℙ : measure α) (μ : measure E) : E → ℝ≥0∞ := 
+if hX : has_pdf X ℙ μ then classical.some hX.pdf' else 0
 
 @[measurability]
-lemma measurable_pdf (X : α → E) (ℙ : measure α) (μ : measure E) [hX : has_pdf X ℙ μ] : 
+lemma measurable_pdf (X : α → E) (ℙ : measure α) (μ : measure E) : 
   measurable (pdf X ℙ μ) :=
-(classical.some_spec hX.pdf').1
+begin
+  by_cases hX : has_pdf X ℙ μ,
+  { rw [pdf, dif_pos hX],
+    exact (classical.some_spec hX.pdf').1 },
+  { rw [pdf, dif_neg hX], 
+    exact measurable_zero }
+end
 
 lemma pdf_spec (X : α → E) (ℙ : measure α) (μ : measure E) [hX : has_pdf X ℙ μ] :
   measure.map X ℙ = μ.with_density (pdf X ℙ μ) :=
-(classical.some_spec hX.pdf').2
+begin
+  rw [pdf, dif_pos hX],
+  exact (classical.some_spec hX.pdf').2
+end
 
 lemma pdf_spec' (X : α → E) (ℙ : measure α) (μ : measure E) 
   [hX : has_pdf X ℙ μ] {s : set E} (hs : measurable_set s) :
@@ -59,24 +68,28 @@ variables {ℙ : measure α} {μ : measure E}
 
 section 
 
-variables [is_finite_measure ℙ] {X : α → E} [has_pdf X ℙ μ] (hX : measurable X)
+variables [is_finite_measure ℙ] {X : α → E} (hX : measurable X)
 
 include hX
 
-lemma lintegral_eq_measure_univ : ∫⁻ x, pdf X ℙ μ x ∂μ = ℙ set.univ :=
+lemma lintegral_eq_measure_univ [has_pdf X ℙ μ] : 
+  ∫⁻ x, pdf X ℙ μ x ∂μ = ℙ set.univ :=
 begin
   rw [← set_lintegral_univ, ← pdf_spec' X ℙ μ measurable_set.univ, 
       measure.map_apply hX measurable_set.univ, set.preimage_univ],
 end
 
 lemma ae_lt_top (ℙ : measure α) [is_finite_measure ℙ] (μ : measure E) 
-  {X : α → E} [has_pdf X ℙ μ] (hX : measurable X) : 
-  ∀ᵐ x ∂μ, pdf X ℙ μ x < ∞ :=
+  {X : α → E} (hX : measurable X) : ∀ᵐ x ∂μ, pdf X ℙ μ x < ∞ :=
 begin
-  refine ae_lt_top (measurable_pdf X ℙ μ) _,
-  rw lintegral_eq_measure_univ hX,
-  exact measure_lt_top _ _,
-  apply_instance
+  by_cases hpdf : has_pdf X ℙ μ,
+  { refine ae_lt_top (measurable_pdf X ℙ μ) _,
+    rw lintegral_eq_measure_univ hX,
+    exact measure_lt_top _ _,
+    { apply_instance },
+    { exact hpdf } },
+  { rw [pdf, dif_neg hpdf],
+    exact filter.eventually_of_forall (λ x, with_top.zero_lt_top) }
 end
 
 lemma of_real_to_real_ae_eq : 
