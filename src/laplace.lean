@@ -17,6 +17,7 @@ local notation `⟪`x`, `y`⟫` := @inner ℝ E _ x y
 def laplace_transform (μ : measure E) (support : set E) : E → ℝ := 
 λ s, ∫ x in support, exp (-⟪s, x⟫) ∂μ
 
+-- make it localized 
 notation `𝓛 ` μ:75 := laplace_transform μ set.univ
 notation `𝓛 ` μ ` on ` support:75 := laplace_transform μ support
 
@@ -104,6 +105,15 @@ begin
   { refine ae_of_all _ (λ x, le_of_lt (exp_pos _)) },
 end
 
+lemma laplace_transform_map (hsupp : measurable_set support) 
+  {f : E → E} (hf : measurable f) {s : E} : 
+  (𝓛 (map f μ) on support) s = ∫ x in f ⁻¹' support, exp (-⟪s, f x⟫) ∂μ :=
+begin
+  simp only [laplace_transform],
+  rw set_integral_map hsupp _ hf,
+  measurability,
+end
+
 /-- Given a measure `μ`, the Laplace transform of `μ.with_density (x ↦ exp(-⟪t, x⟫))` at `s` 
 equals the Laplace transform of `μ` at `s + t`. -/
 lemma laplace_transform_with_density_add (hsupp : measurable_set support) {s t : E} :
@@ -117,6 +127,14 @@ begin
     refl },
   { measurability },
   { exact (ae_of_all _ (λ x hx, ennreal.of_real_lt_top)) },
+end
+
+lemma laplace_transform_with_density_smul 
+  (hsupp : measurable_set support) {s : E} {c : ℝ} :
+  (𝓛 (map (λ x, c • x) μ) on support) s = (𝓛 μ on ((λ x, c • x) ⁻¹' support)) (c • s) :=
+begin
+  rw laplace_transform_map hsupp (measurable_id'.const_smul' c),
+  simp only [laplace_transform, inner_smul_left, inner_smul_right, is_R_or_C.conj_to_real]
 end
 
 end
