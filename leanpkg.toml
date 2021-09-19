@@ -1,8 +1,8 @@
 [package]
 name = "probability_theory"
 version = "0.1"
-lean_version = "leanprover-community/lean:3.32.1"
+lean_version = "leanprover-community/lean:3.33.0"
 path = "src"
 
 [dependencies]
-mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "b0e8ced14fa024c290d90843076956543a180fcd"}
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "55a2c1a473055a47eb53953a54db146ea3431659"}

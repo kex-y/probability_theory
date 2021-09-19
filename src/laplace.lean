@@ -64,22 +64,6 @@ begin
   refl
 end
 
--- needs pr
-lemma restrict_with_density 
-  (μ : measure α) (f : α → ℝ≥0∞) {s : set α} (hs : measurable_set s) :
-  (μ.with_density f).restrict s = (μ.restrict s).with_density f :=
-begin
-  ext1 t ht,
-  rw [restrict_apply ht, with_density_apply _ ht, 
-      with_density_apply _ (ht.inter hs), restrict_restrict ht],
-end
-
--- needs pr
-lemma set_lintegral_with_density_eq_lintegral_mul (μ : measure α) {f g : α → ℝ≥0∞}
-  (hf : measurable f) (hg : measurable g) {s : set α} (hs : measurable_set s) :
-  ∫⁻ x in s, g x ∂μ.with_density f = ∫⁻ x in s, (f * g) x ∂μ :=
-by rw [restrict_with_density _ _ hs, lintegral_with_density_eq_lintegral_mul _ hf hg]
-
 /-- The Laplace transform of `μ.with_density f` on the set `S` equals 
 `∫ x in S, exp (-⟪s, x⟫) * f x ∂μ`. 
 
@@ -92,7 +76,7 @@ lemma laplace_transform_with_density (hsupp : measurable_set support)
 begin
   simp only [laplace_transform],
   rw [integral_eq_lintegral_of_nonneg_ae, integral_eq_lintegral_of_nonneg_ae],
-  { rw [set_lintegral_with_density_eq_lintegral_mul _ hf 
+  { rw [set_lintegral_with_density_eq_set_lintegral_mul _ hf 
         (measurable_const.inner measurable_id').neg.exp.ennreal_of_real hsupp],
     congr' 1,
     refine set_lintegral_congr_fun hsupp 
