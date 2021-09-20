@@ -95,7 +95,7 @@ begin
   by_cases hpdf : has_pdf X ℙ μ,
   { refine ae_lt_top (measurable_pdf X ℙ μ) _,
     rw lintegral_eq_measure_univ hX,
-    exact measure_lt_top _ _,
+    exact (measure_lt_top _ _).ne,
     { apply_instance },
     { exact hpdf } },
   { rw [pdf, dif_neg hpdf],
@@ -272,8 +272,8 @@ begin
     measurable_nnnorm.coe_nnreal_ennreal (@measurable_const _ _ _ _ ↑M) _) _,
   { simpa using hM },
   { rw lintegral_const,
-    refine ennreal.mul_lt_top ennreal.coe_lt_top _,
-    simp [hs] }
+    refine ennreal.mul_lt_top ennreal.coe_lt_top.ne _,
+    simp [hs.ne] }
 end
 
 lemma set_lintegral_nnnorm_lt_top_of_is_compact 
@@ -302,8 +302,8 @@ begin
              algebra.id.smul_eq_mul, pi.one_apply, pi.smul_apply],
   rw lintegral_mul_const _ measurable_nnnorm.coe_nnreal_ennreal,
   { refine ennreal.mul_lt_top (set_lintegral_nnnorm_lt_top_of_is_compact 
-      (lt_top_iff_ne_top.2 hsupp) (is_compact_support X ℙ volume))
-      (ennreal.inv_lt_top.2 (support_not_null X ℙ volume)) },
+      (lt_top_iff_ne_top.2 hsupp) (is_compact_support X ℙ volume)).ne
+      (ennreal.inv_lt_top.2 (support_not_null X ℙ volume)).ne },
   { apply_instance }
 end
 
