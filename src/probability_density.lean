@@ -5,6 +5,7 @@ Authors: Kexing Ying
 -/
 import measure_theory.decomposition.radon_nikodym
 import measure_theory.measure.lebesgue
+import measure_theory.measure.with_density_vector_measure
 
 /-!
 # Probability density function
@@ -278,6 +279,13 @@ begin
   exact set_lintegral_measure_zero _ _ this,
   apply_instance
 end
+
+-- lemma comp_pdf_ae_eq [has_pdf X ℙ]
+--   (g : ℝ → ℝ) (hg : quasi_measure_preserving g) :
+--   pdf (g ∘ X) ℙ =ᵐ[volume] radon_nikodym_deriv (map (g ∘ X) ℙ) volume :=
+-- begin
+--   -- refine integrable.ae_eq_of_with_densityᵥ_eq _ _ _,
+-- end
 
 /-- If `X` is a real-valued random variable that has pdf `f`, then the expectation of `X` equals
 `∫ x, x * f x ∂λ` where `λ` is the Lebesgue measure. -/
