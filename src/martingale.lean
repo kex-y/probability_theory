@@ -35,11 +35,8 @@ of σ-algebras such that that sequence of functions is measurable with respect t
 the filtration. -/
 def natural (u : ι → α → β) (hum : ∀ i, measurable (u i)) : filtration α ι m := 
 { seq := λ i, ⨆ j ≤ i, measurable_space.comap (u j) infer_instance,
-  mono := sorry,
-  le := 
-  begin
-    sorry
-  end }
+  mono := λ i j hij, bsupr_le_bsupr' $ λ k hk, le_trans hk hij,
+  le := λ i, bsupr_le (λ j hj s hs, let ⟨t, ht, ht'⟩ := hs in ht' ▸ hum j ht) }
 
 section is_martingale
 
