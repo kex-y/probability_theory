@@ -25,7 +25,9 @@ instance sigma_finite_of_sigma_finite_filtration (μ : measure α) (f : filtrati
   @sigma_finite α (f.seq i) (μ.trim (f.le i)) := 
 by apply hf.sigma_finite -- can't exact here
 
-def measurable_f (f : filtration α ι m) (u : ι → α → β) : Prop := 
+/-- A sequence of functions `u` is adapted to a filtration `f` if for all `i`, 
+`u i` is `f i`-measurable. -/
+def adapted (f : filtration α ι m) (u : ι → α → β) : Prop := 
 ∀ ⦃i : ι⦄, measurable[f.seq i] (u i)
 
 namespace filtration
@@ -43,8 +45,8 @@ lemma measurable_le {m m0 : measurable_space α} (hm : m ≤ m0) {f : α → β}
   (hf : measurable[m] f) : measurable[m0] f :=
 λ s hs, hm _ (hf hs)
 
-lemma measurable_f_natural {u : ι → α → β} (hum : ∀ i, measurable[m] (u i)) : 
-  measurable_f (natural u hum) u := 
+lemma adapted_natural {u : ι → α → β} (hum : ∀ i, measurable[m] (u i)) : 
+  adapted (natural u hum) u := 
 λ i, measurable_le (le_bsupr_of_le i (le_refl i) (le_refl _)) (λ s hs, ⟨s, hs, rfl⟩)
 
 section is_martingale
@@ -65,7 +67,7 @@ begin
   refine ae_eq_condexp_of_forall_set_integral_eq _ (hui j) _ _ _,
   { exact λ s hs hlt, (hui i).integrable_on },
   { exact λ s hs hlt, hum hij hs },
-  { exact measurable.ae_measurable' huim }
+  { exact measurable.ae_measurable' huim } 
 end
 
 end is_martingale
