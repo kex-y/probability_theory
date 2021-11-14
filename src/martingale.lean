@@ -186,4 +186,56 @@ end
 
 end
 
+/-- Given a map `u : ι → α → E`, its stopped process with respect to the stopping 
+time `τ` is the map `(i, x) ↦ u (min i (τ x)) x`. 
+
+Intuitively, the stopped process stop evolving once the stopping time has occured. -/
+def stopped_process {α ι : Type*} [linear_order ι] {m : measurable_space α} 
+  {f : filtration α ι m} (u : ι → α → E) 
+  {τ : α → ι} (hτ : is_stopping_time f τ) : ι → α → E :=
+λ i x, u (min i (τ x)) x
+
+def is_stopping_time.measurable_space 
+  {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : measurable_space α :=
+{ measurable_set' := λ s, measurable_set[f i] (s ∩ {x | τ x ≤ i}),
+    measurable_set_empty := 
+      (set.empty_inter {x | τ x ≤ i}).symm ▸ @measurable_set.empty _ (f i),
+    measurable_set_compl := λ s hs, 
+      begin
+        rw (_ : sᶜ ∩ {x | τ x ≤ i} = (sᶜ ∪ {x | τ x ≤ i}ᶜ) ∩ {x | τ x ≤ i}),
+        { refine @measurable_set.inter _ (f i) _ _ _ _,
+          { rw ← set.compl_inter,
+            exact @measurable_set.compl _ _ (f i) hs },
+          { exact hτ i} },
+        { rw set.union_inter_distrib_right, 
+          simp only [set.compl_inter_self, set.union_empty] }
+      end,
+    measurable_set_Union := λ s hs,
+      begin
+        rw set.Union_inter,
+        exact @measurable_set.Union _ _ (f i) _ _ hs,
+      end }
+
+lemma is_stopping_time.measurable_space_mono {τ : α → ι} (hτ : is_stopping_time f τ) : 
+  monotone hτ.measurable_space :=
+begin
+  intros i j hij s hs,
+  show measurable_set[f j] (s ∩ {x | τ x ≤ j}),
+  /-
+  I think the idea is 
+  `s ∩ {τ ≤ j} = s ∩ {τ ≤ i} ∩ {τ ≤ i + 1} ∩ ⋯ ∩ {τ ≤ j}`. Since 
+  `{τ ≤ i + 1}, ⋯, {τ ≤ j}` are all `f j`-measurable, and `s ∩ {τ ≤ i}` is 
+  `f i`-measurable implying it is `f j`-measurable, it is measurable. 
+
+  But then we will have to work in ℕ.
+  -/
+  sorry
+end
+
+-- def is_stopping_time.filtration {τ : α → ι} (hτ : is_stopping_time f τ) : 
+--   filtration α ι m :=
+-- { seq := λ i, hτ.measurable_space i,
+--   mono := _,
+--   le := _ }
+
 end measure_theory
