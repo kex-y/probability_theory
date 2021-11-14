@@ -221,14 +221,6 @@ lemma is_stopping_time.measurable_space_mono {τ : α → ι} (hτ : is_stopping
 begin
   intros i j hij s hs,
   show measurable_set[f j] (s ∩ {x | τ x ≤ j}),
-  /-
-  I think the idea is 
-  `s ∩ {τ ≤ j} = s ∩ {τ ≤ i} ∩ {τ ≤ i + 1} ∩ ⋯ ∩ {τ ≤ j}`. Since 
-  `{τ ≤ i + 1}, ⋯, {τ ≤ j}` are all `f j`-measurable, and `s ∩ {τ ≤ i}` is 
-  `f i`-measurable implying it is `f j`-measurable, it is measurable. 
-
-  But then we will have to work in ℕ.
-  -/
   sorry
 end
 
