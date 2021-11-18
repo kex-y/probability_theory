@@ -255,7 +255,6 @@ lemma is_stopping_time.measurable_space_le (f : filtration α ι m)
 begin
   intros s hs,
   change measurable_set[f i] (s ∩ {x | τ x ≤ i}) at hs,
-  
   sorry
 end
 
