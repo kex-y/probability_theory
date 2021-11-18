@@ -1,7 +1,8 @@
 import measure_theory.function.conditional_expectation
+import probability_theory.notation
 
 noncomputable theory
-open_locale classical measure_theory nnreal ennreal topological_space
+open_locale classical measure_theory nnreal ennreal topological_space probability_theory
 
 namespace measure_theory
 
@@ -215,6 +216,17 @@ begin
   exact @measurable_set.union _ (f i) _ _ (hτ i) (hπ i),
 end
 
+lemma is_stopping_time.add_const
+  [add_group ι] [preorder ι] [covariant_class ι ι (function.swap (+)) (≤)] 
+  [covariant_class ι ι (+) (≤)] 
+  {f : filtration α ι m} {τ : α → ι} (hτ : is_stopping_time f τ) {i : ι} (hi : 0 ≤ i) :
+  is_stopping_time f (λ x, τ x + i) :=
+begin
+  intro j,
+  simp_rw [← le_sub_iff_add_le],
+  exact f.mono (sub_le_self j hi) _ (hτ (j - i)),
+end
+
 section 
 
 variables [preorder ι] {f : filtration α ι m}
@@ -229,68 +241,64 @@ def is_stopping_time.stopped_process {α ι : Type*} [linear_order ι]
 λ i x, u (min i (τ x)) x
 
 def is_stopping_time.measurable_space (f : filtration α ι m)
-  {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : measurable_space α :=
-{ measurable_set' := λ s, measurable_set[f i] (s ∩ {x | τ x ≤ i}),
+  {τ : α → ι} (hτ : is_stopping_time f τ) : measurable_space α :=
+{ measurable_set' := λ s, ∀ i : ι, measurable_set[f i] (s ∩ {x | τ x ≤ i}),
     measurable_set_empty := 
-      (set.empty_inter {x | τ x ≤ i}).symm ▸ @measurable_set.empty _ (f i),
-    measurable_set_compl := λ s hs, 
+      λ i, (set.empty_inter {x | τ x ≤ i}).symm ▸ @measurable_set.empty _ (f i),
+    measurable_set_compl := λ s hs i, 
       begin
         rw (_ : sᶜ ∩ {x | τ x ≤ i} = (sᶜ ∪ {x | τ x ≤ i}ᶜ) ∩ {x | τ x ≤ i}),
         { refine @measurable_set.inter _ (f i) _ _ _ _,
           { rw ← set.compl_inter,
-            exact @measurable_set.compl _ _ (f i) hs },
+            exact @measurable_set.compl _ _ (f i) (hs i) },
           { exact hτ i} },
         { rw set.union_inter_distrib_right, 
           simp only [set.compl_inter_self, set.union_empty] }
       end,
-    measurable_set_Union := λ s hs,
+    measurable_set_Union := λ s hs i,
       begin
+        rw forall_swap at hs,
         rw set.Union_inter,
-        exact @measurable_set.Union _ _ (f i) _ _ hs,
+        exact @measurable_set.Union _ _ (f i) _ _ (hs i),
       end }
 
-lemma is_stopping_time.measurable_space_le (f : filtration α ι m)
-  {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : 
-  hτ.measurable_space f i ≤ m :=
+lemma is_stopping_time.measurable_space_le [encodable ι] (f : filtration α ι m)
+  {τ : α → ι} (hτ : is_stopping_time f τ) : 
+  hτ.measurable_space f ≤ m :=
 begin
   intros s hs,
-  change measurable_set[f i] (s ∩ {x | τ x ≤ i}) at hs,
-  
-  sorry
+  change ∀ i, measurable_set[f i] (s ∩ {x | τ x ≤ i}) at hs,
+  rw (_ : s = ⋃ i, s ∩ {x | τ x ≤ i}), 
+  { exact measurable_set.Union (λ i, f.le i _ (hs i)) },
+  { ext x, split; rw set.mem_Union, 
+    { exact λ hx, ⟨τ x, hx, le_refl _⟩ },
+    { rintro ⟨_, hx, _⟩,
+      exact hx } }
 end
 
-instance is_stopping_time.sigma_finite {μ : measure α} [sigma_finite_filtration μ f] 
-  (f : filtration α ι m) {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : 
-  @sigma_finite α (hτ.measurable_space f i) (μ.trim (hτ.measurable_space_le f i)) :=
-begin
-  sorry
-end
-
-lemma is_stopping_time.measurable_space_const (i : ι) : 
-  (is_stopping_time_const i).measurable_space f i = f i :=
-begin
-  ext s,
-  split; intro hs,
-  { change measurable_set[f i] (s ∩ {x | i ≤ i}) at hs,
-    simpa using hs },
-  { change measurable_set[f i] (s ∩ {x | i ≤ i}),
-    simpa using hs }
-end
+-- instance is_stopping_time.sigma_finite 
+--   [encodable ι] {μ : measure α} [sigma_finite_filtration μ f] 
+--   (f : filtration α ι m) {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : 
+--   @sigma_finite α (hτ.measurable_space f) (μ.trim (hτ.measurable_space_le f)) :=
+-- begin
+--   sorry
+-- end
 
 end
 
 section
 
-variables [linear_order ι] {f : filtration α ι m} [has_le E] {μ : measure α} 
-  [sigma_finite_filtration μ f]
+variables [encodable ι] [linear_order ι] {f : filtration α ι m} [has_le E] 
+  {μ : measure α} [sigma_finite_filtration μ f]
 
-lemma foo {u : ι → Lp E 1 μ} (hu : is_supermartingale μ f u) {τ π : α → ι} 
-  (hτ : is_stopping_time f τ) (hπ : is_stopping_time f π) (i : ι) :
-  μ[hτ.stopped_process f (λ i, u i) i | hπ.measurable_space_le f i] = 
-  (hτ.max hπ).stopped_process f (λ i, u i) i := 
-begin
-  sorry
-end
+-- Is this the correct formulation 
+-- lemma foo {u : ι → Lp E 1 μ} (hu : is_supermartingale μ f u) {τ π : α → ι} 
+--   (hτ : is_stopping_time f τ) (hπ : is_stopping_time f π) (i : ι) :
+--   μ[hτ.stopped_process f (λ i, u i) i | hπ.measurable_space_le f] = 
+--   (hτ.max hπ).stopped_process f (λ i, u i) i := 
+-- begin
+--   sorry
+-- end
 
 end
 
