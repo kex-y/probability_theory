@@ -17,7 +17,13 @@ instance {α ι : Type*} [preorder ι] {m : measurable_space α} :
 
 open topological_space
 
-variables {α β ι : Type*} [preorder ι] {m : measurable_space α} [measurable_space β]
+variables {α β ι : Type*} {m : measurable_space α} [measurable_space β]
+variables {E : Type*} [normed_group E] [measurable_space E]  
+  [second_countable_topology E] [normed_space ℝ E] [complete_space E] [borel_space E]
+
+section
+
+variables [preorder ι]
 
 lemma measurable_set_of_filtration {f : filtration α ι m} {s : set α} {i : ι}
   (hs : measurable_set[f i] s) : measurable_set[m] s :=
@@ -58,9 +64,6 @@ lemma adapted_natural {u : ι → α → β} (hum : ∀ i, measurable[m] (u i)) 
 λ i, measurable_le (le_bsupr_of_le i (le_refl i) (le_refl _)) (λ s hs, ⟨s, hs, rfl⟩)
 
 end filtration
-
-variables {E : Type*} [normed_group E] [measurable_space E]  
-  [second_countable_topology E] [normed_space ℝ E] [complete_space E] [borel_space E]
 
 def is_martingale (μ : measure α) (f : filtration α ι m) (u : ι → Lp E 1 μ) : Prop :=
 ∀ ⦃i j : ι⦄, i ≤ j → ∀ ⦃s : set α⦄, measurable_set[f i] s →
@@ -110,39 +113,41 @@ begin
   { exact measurable.ae_measurable' huim } 
 end
 
-lemma is_submartingale.neg [preorder E] [covariant_class E E (+) (≤)]
-  (hu : is_submartingale μ f u) : 
-  is_supermartingale μ f (-u) :=
-begin
-  intros _ _ hij _ hs,
-  rw [(_ : ∫ x in s, (-u) j x ∂μ = ∫ x in s, -u j x ∂μ), 
-      (_ : ∫ x in s, (-u) i x ∂μ = ∫ x in s, -u i x ∂μ), 
-      integral_neg, integral_neg, neg_le_neg_iff],
-  { exact hu hij hs },
-  { rw set_integral_congr_ae (measurable_set_of_filtration hs),
-    filter_upwards [Lp.coe_fn_neg (u i)],
-    intros, assumption },
-  { rw set_integral_congr_ae (measurable_set_of_filtration hs),
-    filter_upwards [Lp.coe_fn_neg (u j)],
-    intros, assumption },
-end
+-- The following lemma compiles but crashes lean sometimes.
 
-lemma is_supermartingale.neg [preorder E] [covariant_class E E (+) (≤)]
-  (hu : is_supermartingale μ f u) : 
-  is_submartingale μ f (-u) :=
-begin
-  intros _ _ hij _ hs,
-  rw [(_ : ∫ x in s, (-u) j x ∂μ = ∫ x in s, -u j x ∂μ), 
-      (_ : ∫ x in s, (-u) i x ∂μ = ∫ x in s, -u i x ∂μ), 
-      integral_neg, integral_neg, neg_le_neg_iff],
-  { exact hu hij hs },
-  { rw set_integral_congr_ae (measurable_set_of_filtration hs),
-    filter_upwards [Lp.coe_fn_neg (u i)],
-    intros, assumption },
-  { rw set_integral_congr_ae (measurable_set_of_filtration hs),
-    filter_upwards [Lp.coe_fn_neg (u j)],
-    intros, assumption },
-end
+-- lemma is_submartingale.neg [preorder E] [covariant_class E E (+) (≤)]
+--   (hu : is_submartingale μ f u) : 
+--   is_supermartingale μ f (-u) :=
+-- begin
+--   intros _ _ hij _ hs,
+--   rw [(_ : ∫ x in s, (-u) j x ∂μ = ∫ x in s, -u j x ∂μ), 
+--       (_ : ∫ x in s, (-u) i x ∂μ = ∫ x in s, -u i x ∂μ), 
+--       integral_neg, integral_neg, neg_le_neg_iff],
+--   { exact hu hij hs },
+--   { rw set_integral_congr_ae (measurable_set_of_filtration hs),
+--     filter_upwards [Lp.coe_fn_neg (u i)],
+--     intros, assumption },
+--   { rw set_integral_congr_ae (measurable_set_of_filtration hs),
+--     filter_upwards [Lp.coe_fn_neg (u j)],
+--     intros, assumption },
+-- end
+
+-- lemma is_supermartingale.neg [preorder E] [covariant_class E E (+) (≤)]
+--   (hu : is_supermartingale μ f u) : 
+--   is_submartingale μ f (-u) :=
+-- begin
+--   intros _ _ hij _ hs,
+--   rw [(_ : ∫ x in s, (-u) j x ∂μ = ∫ x in s, -u j x ∂μ), 
+--       (_ : ∫ x in s, (-u) i x ∂μ = ∫ x in s, -u i x ∂μ), 
+--       integral_neg, integral_neg, neg_le_neg_iff],
+--   { exact hu hij hs },
+--   { rw set_integral_congr_ae (measurable_set_of_filtration hs),
+--     filter_upwards [Lp.coe_fn_neg (u i)],
+--     intros, assumption },
+--   { rw set_integral_congr_ae (measurable_set_of_filtration hs),
+--     filter_upwards [Lp.coe_fn_neg (u j)],
+--     intros, assumption },
+-- end
 
 end
 
@@ -186,16 +191,44 @@ end
 
 end
 
+lemma is_stopping_time_const {f : filtration α ι m} (i : ι) : 
+  is_stopping_time f (λ x, i) :=
+λ j, by simp
+
+end
+
+lemma is_stopping_time.max [linear_order ι] {f : filtration α ι m} {τ π : α → ι}
+  (hτ : is_stopping_time f τ) (hπ : is_stopping_time f π) :
+  is_stopping_time f (λ x, max (τ x) (π x)) :=
+begin
+  intro i, 
+  simp_rw [max_le_iff, set.set_of_and],
+  exact @measurable_set.inter _ (f i) _ _ (hτ i) (hπ i),
+end
+
+lemma is_stopping_time.min [linear_order ι] {f : filtration α ι m} {τ π : α → ι}
+  (hτ : is_stopping_time f τ) (hπ : is_stopping_time f π) :
+  is_stopping_time f (λ x, min (τ x) (π x)) :=
+begin
+  intro i, 
+  simp_rw [min_le_iff, set.set_of_or],
+  exact @measurable_set.union _ (f i) _ _ (hτ i) (hπ i),
+end
+
+section 
+
+variables [preorder ι] {f : filtration α ι m}
+
 /-- Given a map `u : ι → α → E`, its stopped process with respect to the stopping 
 time `τ` is the map `(i, x) ↦ u (min i (τ x)) x`. 
 
 Intuitively, the stopped process stop evolving once the stopping time has occured. -/
-def stopped_process {α ι : Type*} [linear_order ι] {m : measurable_space α} 
-  {f : filtration α ι m} (u : ι → α → E) 
+def is_stopping_time.stopped_process {α ι : Type*} [linear_order ι] 
+  {m : measurable_space α} (f : filtration α ι m) (u : ι → α → E) 
   {τ : α → ι} (hτ : is_stopping_time f τ) : ι → α → E :=
 λ i x, u (min i (τ x)) x
 
-def is_stopping_time.measurable_space 
+def is_stopping_time.measurable_space (f : filtration α ι m)
   {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : measurable_space α :=
 { measurable_set' := λ s, measurable_set[f i] (s ∩ {x | τ x ≤ i}),
     measurable_set_empty := 
@@ -216,18 +249,48 @@ def is_stopping_time.measurable_space
         exact @measurable_set.Union _ _ (f i) _ _ hs,
       end }
 
-lemma is_stopping_time.measurable_space_mono {τ : α → ι} (hτ : is_stopping_time f τ) : 
-  monotone hτ.measurable_space :=
+lemma is_stopping_time.measurable_space_le (f : filtration α ι m)
+  {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : 
+  hτ.measurable_space f i ≤ m :=
 begin
-  intros i j hij s hs,
-  show measurable_set[f j] (s ∩ {x | τ x ≤ j}),
+  intros s hs,
+  change measurable_set[f i] (s ∩ {x | τ x ≤ i}) at hs,
   sorry
 end
 
--- def is_stopping_time.filtration {τ : α → ι} (hτ : is_stopping_time f τ) : 
---   filtration α ι m :=
--- { seq := λ i, hτ.measurable_space i,
---   mono := _,
---   le := _ }
+instance is_stopping_time.sigma_finite {μ : measure α} [sigma_finite_filtration μ f] 
+  (f : filtration α ι m) {τ : α → ι} (hτ : is_stopping_time f τ) (i : ι) : 
+  @sigma_finite α (hτ.measurable_space f i) (μ.trim (hτ.measurable_space_le f i)) :=
+begin
+  sorry
+end
+
+lemma is_stopping_time.measurable_space_const (i : ι) : 
+  (is_stopping_time_const i).measurable_space f i = f i :=
+begin
+  ext s,
+  split; intro hs,
+  { change measurable_set[f i] (s ∩ {x | i ≤ i}) at hs,
+    simpa using hs },
+  { change measurable_set[f i] (s ∩ {x | i ≤ i}),
+    simpa using hs }
+end
+
+end
+
+section
+
+variables [linear_order ι] {f : filtration α ι m} [has_le E] {μ : measure α} 
+  [sigma_finite_filtration μ f]
+
+lemma foo {u : ι → Lp E 1 μ} (hu : is_supermartingale μ f u) {τ π : α → ι} 
+  (hτ : is_stopping_time f τ) (hπ : is_stopping_time f π) (i : ι) :
+  μ[hτ.stopped_process f (λ i, u i) i | hπ.measurable_space_le f i] = 
+  (hτ.max hπ).stopped_process f (λ i, u i) i := 
+begin
+  sorry
+end
+
+end
 
 end measure_theory
