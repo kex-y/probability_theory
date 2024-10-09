@@ -1,4 +1,4 @@
-(Results in the archive folder has been merged into [mathlib](https://github.com/leanprover-community/mathlib) and is maintained from there)
+(Results in this repo has been merged into [mathlib](https://github.com/leanprover-community/mathlib) and is maintained from there)
 
 # Propbability Theory
 
