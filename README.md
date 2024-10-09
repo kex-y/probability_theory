@@ -16,7 +16,3 @@ Results in the archive folder have been merged into [mathlib](https://github.com
 - [`measure_theory.decomposition.signed_hahn`](https://github.com/leanprover-community/mathlib/blob/master/src/measure_theory/decomposition/signed_hahn.lean)
 - [`measure_theory.decomposition.jordan`](https://github.com/leanprover-community/mathlib/blob/master/src/measure_theory/decomposition/jordan.lean)
 - [`measure_theory.decomposition.lebesgue`](https://github.com/leanprover-community/mathlib/blob/master/src/measure_theory/decomposition/jordan.lean)
-
-## src
-
-Currently defining conditional expectation, probability density function, and other results using Radon-Nikodym.
